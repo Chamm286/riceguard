@@ -1,0 +1,108 @@
+{
+  "info": {
+    "name": "RiceGuard API",
+    "description": "API collection cho hệ thống RiceGuard",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Auth - Login Admin",
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "if (pm.response.code === 200) {",
+            "  const json = pm.response.json();",
+            "  pm.collectionVariables.set('token', json.token);",
+            "  console.log('✅ Token saved');",
+            "}"
+          ]
+        }
+      }],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/auth/login",
+          "host": ["{{base_url}}"],
+          "path": ["auth", "login"]
+        }
+      }
+    },
+    {
+      "name": "2. Dashboard - Stats",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": {
+          "raw": "{{base_url}}/dashboard/stats",
+          "host": ["{{base_url}}"],
+          "path": ["dashboard", "stats"]
+        }
+      }
+    },
+    {
+      "name": "3. Alerts - List",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": {
+          "raw": "{{base_url}}/alerts?limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["alerts"],
+          "query": [{ "key": "limit", "value": "10" }]
+        }
+      }
+    },
+    {
+      "name": "4. Visitors - Alerts",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": {
+          "raw": "{{base_url}}/visitors/alerts?limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["visitors", "alerts"],
+          "query": [{ "key": "limit", "value": "10" }]
+        }
+      }
+    },
+    {
+      "name": "5. Visitors - Map",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": {
+          "raw": "{{base_url}}/visitors/map",
+          "host": ["{{base_url}}"],
+          "path": ["visitors", "map"]
+        }
+      }
+    },
+    {
+      "name": "6. n8n - Test Visitor Threat",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ip\": \"45.123.45.67\",\n  \"country\": \"CN\",\n  \"city\": \"Beijing\",\n  \"isp\": \"China Telecom\",\n  \"user_agent\": \"sqlmap/1.7\",\n  \"path\": \"/admin\"\n}"
+        },
+        "url": {
+          "raw": "{{n8n_url}}/visitor-threat",
+          "host": ["{{n8n_url}}"],
+          "path": ["visitor-threat"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:5000/api" },
+    { "key": "n8n_url", "value": "http://localhost:5678/webhook" },
+    { "key": "token", "value": "" }
+  ]
+}

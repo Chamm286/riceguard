@@ -1,0 +1,7 @@
+[
+  {
+    "ip": "10.0.0.99",
+    "reason": "SSH Brute Force alert #",
+    "blocked_at": "2026-10-09T10:16:05.909Z"
+  }
+]

@@ -35,3 +35,6 @@ ai-model/venv/
 *.bak
 nohup.out
 *.deb
+
+frontend/public/alarm*.mp3
+**/node_modules/

@@ -1,0 +1,99 @@
+{
+  "name": "A8 | Daily Security Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [{ "field": "hours", "hoursInterval": 8 }] }
+      },
+      "id": "cron-a8",
+      "name": "Cron 8h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-600, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE severity = 'critical')::int AS critical, COUNT(*) FILTER (WHERE severity = 'high')::int AS high, COUNT(DISTINCT ip_address)::int AS unique_ips FROM alerts WHERE created_at > NOW() - INTERVAL '24 hours'",
+        "options": {}
+      },
+      "id": "stats-a8",
+      "name": "Thống kê 24h",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [-380, 300],
+      "credentials": { "postgres": { "id": "REPLACE", "name": "Postgres account" } }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT ip_address, COUNT(*)::int AS hits FROM alerts WHERE created_at > NOW() - INTERVAL '24 hours' GROUP BY ip_address ORDER BY hits DESC LIMIT 5",
+        "options": {}
+      },
+      "id": "top-a8",
+      "name": "Top 5 IP",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [-380, 500],
+      "credentials": { "postgres": { "id": "REPLACE", "name": "Postgres account" } }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "merge-a8",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [-160, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lấy stats\nlet stats = { total: 0, critical: 0, high: 0, unique_ips: 0 };\nlet topIPs = [];\n\nconst items = $input.all();\nconsole.log('Input items:', items.length);\n\n// Tìm stats\nfor (const item of items) {\n  const j = item.json;\n  if (j.total !== undefined && j.critical !== undefined) {\n    stats = j;\n    break;\n  }\n}\n\n// Tìm top IPs (từ tất cả items)\nfor (const item of items) {\n  const j = item.json;\n  if (j.ip_address && j.hits !== undefined) {\n    topIPs.push(j);\n  }\n}\n\n// Nếu không có data từ merge, lấy riêng\nif (topIPs.length === 0) {\n  try {\n    const topNode = $('Top 5 IP').all();\n    topIPs = topNode.map(i => i.json).filter(j => j.ip_address);\n  } catch (e) {}\n}\n\nif (stats.total === 0 && stats.critical === 0) {\n  try {\n    const statsNode = $('Thống kê 24h').first();\n    if (statsNode && statsNode.json) stats = statsNode.json;\n  } catch (e) {}\n}\n\nconst now = new Date();\nlet msg = '📊 BÁO CÁO AN NINH 24H\\n';\nmsg += '📅 ' + now.toLocaleDateString('vi-VN') + '\\n\\n';\nmsg += '🚨 Tổng alert: ' + (stats.total || 0) + '\\n';\nmsg += '🔴 Critical: ' + (stats.critical || 0) + '\\n';\nmsg += '🟠 High: ' + (stats.high || 0) + '\\n';\nmsg += '🌐 IP độc hại: ' + (stats.unique_ips || 0) + '\\n\\n';\n\nif (topIPs.length > 0) {\n  msg += '🔥 Top 5 IP:\\n';\n  topIPs.slice(0, 5).forEach((ip, i) => {\n    msg += (i + 1) + '. ' + ip.ip_address + ' (' + ip.hits + ' lần)\\n';\n  });\n} else {\n  msg += '🔥 Top 5 IP: (không có dữ liệu)';\n}\n\nreturn [{ json: { message: msg } }];"
+      },
+      "id": "format-a8",
+      "name": "Format báo cáo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [60, 400]
+    },
+    {
+      "parameters": {
+        "chatId": "7893336271",
+        "text": "={{ $json.message }}",
+        "additionalFields": {}
+      },
+      "id": "tg-a8",
+      "name": "Telegram - Báo cáo",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [280, 400],
+      "credentials": { "telegramApi": { "id": "REPLACE", "name": "Telegram account" } }
+    }
+  ],
+  "connections": {
+    "Cron 8h": {
+      "main": [[
+        { "node": "Thống kê 24h", "type": "main", "index": 0 },
+        { "node": "Top 5 IP", "type": "main", "index": 0 }
+      ]]
+    },
+    "Thống kê 24h": {
+      "main": [[{ "node": "Merge", "type": "main", "index": 0 }]]
+    },
+    "Top 5 IP": {
+      "main": [[{ "node": "Merge", "type": "main", "index": 1 }]]
+    },
+    "Merge": {
+      "main": [[{ "node": "Format báo cáo", "type": "main", "index": 0 }]]
+    },
+    "Format báo cáo": {
+      "main": [[{ "node": "Telegram - Báo cáo", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "tags": []
+}

@@ -1,0 +1,151 @@
+const express = require("express");
+const multer = require("multer");
+const path = require("path");
+const router = express.Router();
+const pool = require("../config/database");
+const { verifyToken } = require("../middlewares/auth.middleware");
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, "../../uploads"));
+  },
+  filename: (req, file, cb) => {
+    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, unique + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) cb(null, true);
+    else cb(new Error("Chỉ chấp nhận file ảnh"));
+  },
+});
+
+// ============ POST /api/reports - Upload báo cáo (farmer) ============
+router.post("/", verifyToken, upload.single("image"), async (req, res) => {
+  try {
+    const { title, description, field_id } = req.body;
+    const userId = req.user.id;
+    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+
+    if (!title) {
+      return res.status(400).json({ success: false, message: "Thiếu tiêu đề" });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO reports (user_id, field_id, title, description, image_url, status, created_at)
+       VALUES ($1, $2, $3, $4, $5, 'pending', NOW())
+       RETURNING id, title, description, image_url, status, created_at`,
+      [userId, field_id || null, title, description, imageUrl]
+    );
+
+    const report = result.rows[0];
+
+    // Gọi n8n webhook D1
+    try {
+      const webhookRes = await fetch("http://localhost:5678/webhook/new-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: report.id,
+          user_id: userId,
+          title: report.title,
+          description: report.description,
+          image_url: report.image_url,
+          created_at: report.created_at,
+        }),
+      });
+      console.log("✅ D1 webhook:", webhookRes.status);
+    } catch (e) {
+      console.log("⚠️ D1 webhook failed:", e.message);
+    }
+
+    res.json({ success: true, data: report });
+  } catch (err) {
+    console.error("❌ POST /reports:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ============ GET /api/reports - Danh sách báo cáo ============
+// Farmer chỉ thấy của mình, admin thấy hết
+router.get("/", verifyToken, async (req, res) => {
+  try {
+    const isAdmin = ["admin", "analyst"].includes(req.user.role);
+    let query, params;
+
+    if (isAdmin) {
+      query = `SELECT r.*, u.full_name AS user_name
+               FROM reports r
+               LEFT JOIN users u ON r.user_id = u.id
+               ORDER BY r.created_at DESC LIMIT 100`;
+      params = [];
+    } else {
+      query = `SELECT r.*, u.full_name AS user_name
+               FROM reports r
+               LEFT JOIN users u ON r.user_id = u.id
+               WHERE r.user_id = $1
+               ORDER BY r.created_at DESC LIMIT 100`;
+      params = [req.user.id];
+    }
+
+    const result = await pool.query(query, params);
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    console.error("❌ GET /reports:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ============ GET /api/reports/:id - Chi tiết 1 báo cáo (để poll AI result) ============
+router.get("/:id", verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      `SELECT r.*, u.full_name AS user_name
+       FROM reports r
+       LEFT JOIN users u ON r.user_id = u.id
+       WHERE r.id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Không tìm thấy báo cáo" });
+    }
+
+    const report = result.rows[0];
+
+    // Farmer chỉ xem được báo cáo của mình
+    const isAdmin = ["admin", "analyst"].includes(req.user.role);
+    if (!isAdmin && report.user_id !== req.user.id) {
+      return res.status(403).json({ success: false, message: "Không có quyền xem" });
+    }
+
+    res.json({ success: true, data: report });
+  } catch (err) {
+    console.error("❌ GET /reports/:id:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ============ PUT /api/reports/:id/status ============
+router.put("/:id/status", verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, ai_analysis, ai_severity, ai_disease } = req.body;
+
+    await pool.query(
+      `UPDATE reports SET status = $1, ai_analysis = $2, ai_severity = $3, ai_disease = $4, reviewed_by = $5, reviewed_at = NOW() WHERE id = $6`,
+      [status, ai_analysis, ai_severity, ai_disease, req.user.id, id]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+module.exports = router;

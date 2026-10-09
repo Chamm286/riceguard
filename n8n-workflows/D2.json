@@ -1,0 +1,428 @@
+{
+  "name": "D2 | Cảnh báo bệnh nặng cho Farmer",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "new-report-v2",
+        "options": {}
+      },
+      "id": "a2459a0e-5e7a-458f-8444-5d0d1834824d",
+      "name": "Webhook - Nhận báo cáo",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "new-report-v2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d1",
+              "name": "report_id",
+              "value": "={{ $json.body.id }}",
+              "type": "number"
+            },
+            {
+              "id": "d2",
+              "name": "title",
+              "value": "={{ $json.body.title }}",
+              "type": "string"
+            },
+            {
+              "id": "d3",
+              "name": "description",
+              "value": "={{ $json.body.description }}",
+              "type": "string"
+            },
+            {
+              "id": "d4",
+              "name": "image_url",
+              "value": "=http://172.17.0.1:5000{{ $json.body.image_url }}",
+              "type": "string"
+            },
+            {
+              "id": "d5",
+              "name": "user_id",
+              "value": "={{ $json.body.user_id }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "63221d50-dc70-4c69-82b1-67a46621c276",
+      "name": "Chuẩn hóa dữ liệu",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.image_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "a8a904be-f701-4928-9a9b-60c2a1c76573",
+      "name": "Tải ảnh lúa",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst item = items[0];\nif (!item.binary || !item.binary.data) throw new Error('KHONG co binary tu node Tai anh');\nconst bd = item.binary.data;\nconst s = $('Chuẩn hóa dữ liệu').first().json;\nlet base64 = bd.data;\nif (base64 === 'filesystem-v2' || !base64 || base64.length < 100) {\n  const buffer = await this.helpers.getBinaryDataBuffer(0, 'data');\n  base64 = buffer.toString('base64');\n}\nreturn [{json:{report_id:s.report_id,title:s.title,description:s.description,image_url:s.image_url,image_base64:base64,mime_type:bd.mimeType||'image/jpeg'}}];"
+      },
+      "id": "8abca134-483a-41f4-9112-821f61250782",
+      "name": "Encode ảnh Base64",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        -192
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=AQ.Ab8RN6IT7QpBKlg-lapHje-LJ7aIQDpINRD4ubMNJJWuTv75VQ",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [\n      { \"text\": \"Ban la chuyen gia nong nghiep. Phan tich anh la lua nay va tra loi CHINH XAC:\\nTINH_TRANG: (khoe manh / vang la / sau benh / han han)\\nMUC_DO: (thap / trung binh / cao)\\nTEN_BENH: (ten benh hoac 'khong co')\\nKHUYEN_NGHI: (khuyen nghi 1-2 cau)\" },\n      { \"inline_data\": { \"mime_type\": \"{{ $json.mime_type }}\", \"data\": \"{{ $json.image_base64 }}\" } }\n    ]\n  }]\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "479a5d30-85a1-4ab2-afe2-b4baa93c3ef3",
+      "name": "Gemini phân tích ảnh",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const inp = $input.first().json;\nconst s = $('Chuẩn hóa dữ liệu').first().json;\nif (!inp.candidates || !inp.candidates[0] || !inp.candidates[0].content) {\n  return [{json:{report_id:s.report_id,title:s.title,description:s.description,image_url:s.image_url,tinh_trang:'Loi AI',muc_do:'khong xac dinh',ten_benh:'Khong co',khuyen_nghi:'Loi: '+JSON.stringify(inp).substring(0,200),ai_full:JSON.stringify(inp).substring(0,500)}}];\n}\nconst t = inp.candidates[0].content.parts[0].text;\nconst tt = (t.match(/TINH_TRANG:\\s*(.+?)(?=\\n|$)/)||[])[1]||'Khong xac dinh';\nconst md = (t.match(/MUC_DO:\\s*(.+?)(?=\\n|$)/)||[])[1]||'Khong xac dinh';\nconst tb = (t.match(/TEN_BENH:\\s*(.+?)(?=\\n|$)/)||[])[1]||'Khong co';\nconst kn = (t.match(/KHUYEN_NGHI:\\s*(.+?)(?=\\n|$)/)||[])[1]||'';\nreturn [{json:{report_id:s.report_id,title:s.title,description:s.description,image_url:s.image_url,tinh_trang:tt.trim(),muc_do:md.trim().toLowerCase(),ten_benh:tb.trim(),khuyen_nghi:kn.trim(),ai_full:t}}];"
+      },
+      "id": "2c1e4b52-73c5-4621-aacb-c55b634ff628",
+      "name": "Parse kết quả AI",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        -192
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE reports \nSET ai_analysis = '{{ $json.tinh_trang }} | {{ $json.muc_do }} | {{ $json.ten_benh }} | {{ $json.khuyen_nghi }}',\n    ai_severity = '{{ $json.muc_do }}',\n    ai_disease = '{{ $json.ten_benh }}',\n    status = 'reviewing'\nWHERE id = {{ $json.report_id }};",
+        "options": {
+          "queryReplacement": "="
+        }
+      },
+      "id": "19c50fd8-fb7b-454e-9077-2f8012278f1e",
+      "name": "Cập nhật Database",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1328,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "PRHgakBkMKU8w08k",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "chatId": "7893336271",
+        "text": "=🌾 BÁO CÁO LÚA MỚI\n\n🆔 Report #{{ $json.report_id }}\n📌 {{ $json.title }}\n📝 {{ $json.description }}\n\n🤖 AI GEMINI PHÂN TÍCH:\n🌱 Tình trạng: {{ $json.tinh_trang }}\n⚠️ Mức độ: {{ $json.muc_do }}\n🦠 Bệnh: {{ $json.ten_benh }}\n💡 Khuyến nghị: {{ $json.khuyen_nghi }}",
+        "additionalFields": {}
+      },
+      "id": "566958cd-d009-45ee-9dff-0e6fc044f717",
+      "name": "Thông báo Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1552,
+        0
+      ],
+      "webhookId": "774f5799-eab8-44c5-a8ec-bd96681b3eeb",
+      "credentials": {
+        "telegramApi": {
+          "id": "DKM7gaGpGoRtcdzq",
+          "name": "Telegram account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-1",
+              "leftValue": "={{ $json.muc_do }}",
+              "rightValue": "cao",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-severity-d2",
+      "name": "IF - Severity Cao?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        600,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  r.id AS report_id, r.title, r.ai_analysis, r.ai_severity, r.ai_disease, r.field_id,\n  u.id AS farmer_id, u.full_name, u.telegram_chat_id,\n  f.name AS field_name, f.location\nFROM reports r\nJOIN users u ON u.id = r.user_id\nLEFT JOIN fields f ON f.id = r.field_id\nWHERE r.id = {{ $('Parse kết quả AI').item.json.report_id }}",
+        "options": {}
+      },
+      "id": "pg-farmer-d2",
+      "name": "Lấy thông tin Farmer",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        800,
+        150
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "PRHgakBkMKU8w08k",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO alerts (alert_type, category, severity, title, description, field_id, status, created_at)\nVALUES (\n  'agriculture',\n  'disease',\n  '{{ $json.ai_severity }}',\n  'Cảnh báo bệnh: {{ $json.ai_disease }} - {{ $json.field_name }}',\n  '{{ $json.ai_analysis }}',\n  {{ $json.field_id }},\n  'new',\n  NOW()\n)\nRETURNING id, title, severity;",
+        "options": {}
+      },
+      "id": "pg-alert-d2",
+      "name": "Insert Alert DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1000,
+        150
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "PRHgakBkMKU8w08k",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Lấy thông tin Farmer').item.json.telegram_chat_id }}",
+        "text": "=🚨 *CẢNH BÁO BỆNH NẶNG*\n\nXin chào *{{ $('Lấy thông tin Farmer').item.json.full_name }}*,\n\n🌾 Vùng: {{ $('Lấy thông tin Farmer').item.json.field_name }}\n📍 Vị trí: {{ $('Lấy thông tin Farmer').item.json.location }}\n🦠 Bệnh: {{ $('Lấy thông tin Farmer').item.json.ai_disease }}\n⚠️ Mức độ: {{ $('Lấy thông tin Farmer').item.json.ai_severity }}\n\n📝 Chi tiết:\n{{ $('Lấy thông tin Farmer').item.json.ai_analysis }}\n\n💡 Hành động ngay:\n- Cách ly khu vực bệnh\n- Phun thuốc theo khuyến nghị\n- Liên hệ kỹ thuật nếu cần\n\n☎️ Hotline: 1900-xxxx",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "tg-farmer-d2",
+      "name": "Telegram - Gửi Farmer",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "7893336271",
+        "text": "=🔔 *CẢNH BÁO MỚI TỪ HỆ THỐNG*\n\n📊 Report #{{ $('Lấy thông tin Farmer').item.json.report_id }}\n👤 Farmer: {{ $('Lấy thông tin Farmer').item.json.full_name }}\n🌾 Vùng: {{ $('Lấy thông tin Farmer').item.json.field_name }}\n📍 Vị trí: {{ $('Lấy thông tin Farmer').item.json.location }}\n🦠 Bệnh: {{ $('Lấy thông tin Farmer').item.json.ai_disease }}\n⚠️ Mức độ: *{{ $('Lấy thông tin Farmer').item.json.ai_severity }}*\n\n✅ Đã gửi cảnh báo cho farmer.\n📋 Alert đã lưu vào DB.",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "tg-admin-d2",
+      "name": "Telegram - Gửi Admin",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1400,
+        150
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook - Nhận báo cáo": {
+      "main": [
+        [
+          {
+            "node": "Chuẩn hóa dữ liệu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chuẩn hóa dữ liệu": {
+      "main": [
+        [
+          {
+            "node": "Tải ảnh lúa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tải ảnh lúa": {
+      "main": [
+        [
+          {
+            "node": "Encode ảnh Base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Encode ảnh Base64": {
+      "main": [
+        [
+          {
+            "node": "Gemini phân tích ảnh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini phân tích ảnh": {
+      "main": [
+        [
+          {
+            "node": "Parse kết quả AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse kết quả AI": {
+      "main": [
+        [
+          {
+            "node": "Cập nhật Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cập nhật Database": {
+      "main": [
+        [
+          {
+            "node": "IF - Severity Cao?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Severity Cao?": {
+      "main": [
+        [
+          {
+            "node": "Lấy thông tin Farmer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Thông báo Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lấy thông tin Farmer": {
+      "main": [
+        [
+          {
+            "node": "Insert Alert DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Alert DB": {
+      "main": [
+        [
+          {
+            "node": "Telegram - Gửi Farmer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram - Gửi Farmer": {
+      "main": [
+        [
+          {
+            "node": "Telegram - Gửi Admin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d2-v2-1791553616",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

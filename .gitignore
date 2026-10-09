@@ -28,3 +28,10 @@ venv/
 ai-model/venv/
 *.bak
 *.bak.*
+
+# Backup files
+*.bak-*
+*.bak2
+*.bak
+nohup.out
+*.deb

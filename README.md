@@ -154,7 +154,6 @@ feat: · fix: · docs: · style: · refactor: · test: · chore:
 📄 Giấy phép
 
 Dự án phát hành dưới giấy phép MIT License — xem file LICENSE.
-<div align="center">
 
 🌟 RiceGuard — Bảo vệ mùa màng & Bảo vệ hệ thống 🌟
 

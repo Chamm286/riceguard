@@ -159,6 +159,3 @@ Dự án phát hành dưới giấy phép MIT License — xem file LICENSE.
 🌟 RiceGuard — Bảo vệ mùa màng & Bảo vệ hệ thống 🌟
 
 Made with ❤️ by RiceGuard Team
-
-⬆ Về đầu trang
-</div> ```

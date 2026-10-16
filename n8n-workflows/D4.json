@@ -1,0 +1,200 @@
+{
+  "name": "D4 | IoT Sensor Offline Monitor.",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "8ff02f1e-d7d3-4727-89b5-e58aded77e3d",
+      "name": "Every 15minutes"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  s.id, s.sensor_code, s.sensor_type, s.field_id, s.last_seen_at, s.status,\n  f.region,\n  EXTRACT(EPOCH FROM (NOW() - s.last_seen_at)) / 60 AS minutes_ago\nFROM iot_sensors s\nLEFT JOIN fields f ON f.id = s.field_id\nWHERE s.status IN ('active', 'offline')",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "7f66c461-a2b5-4c8a-a9bd-dcbde8320bd2",
+      "name": "Get Active Sensors",
+      "credentials": {
+        "postgres": {
+          "id": "TDjlfcrzYSZKgZWp",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = Date.now();\nconst THRESHOLD_MIN = 30;\n\nreturn $input.all()\n  .map(item => {\n    const s = item.json;\n    if (!s.last_seen_at) {\n      return { json: { ...s, minutes_ago: null, offline: true, reason: 'Chưa từng gửi dữ liệu' } };\n    }\n    const lastSeen = new Date(s.last_seen_at).getTime();\n    const minutesAgo = (now - lastSeen) / 60000;\n    const offline = minutesAgo > THRESHOLD_MIN;\n    return {\n      json: {\n        ...s,\n        minutes_ago: Math.round(minutesAgo),\n        offline,\n        reason: offline ? `Không gửi dữ liệu ${Math.round(minutesAgo)} phút` : 'OK'\n      }\n    };\n  })\n  .filter(x => x.json.offline);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "b4e1482e-729f-490f-88de-ebf2025a91d7",
+      "name": "Check Offline"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO alerts \n  (field_id, alert_type, category, severity, title, description, \n   source_workflow, region, status, metadata)\nVALUES \n  ($1, 'IOT_OFFLINE', 'agriculture', 'medium', $2, $3, 'D4', $4, 'new', $5::jsonb)\nRETURNING id",
+        "options": {
+          "queryReplacement": "={{ $json.field_id }}, =Cảm biến {{ $json.sensor_code }} offline, {{ $json.reason }}, {{ $json.region }}, ={{ JSON.stringify({sensor_id: $json.id, sensor_code: $json.sensor_code, minutes_ago: $json.minutes_ago}) }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        672,
+        0
+      ],
+      "id": "0dbb4332-9a01-45d3-b7c1-9b7684435342",
+      "name": "Create IoT Alert",
+      "credentials": {
+        "postgres": {
+          "id": "TDjlfcrzYSZKgZWp",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE iot_sensors \nSET status = 'offline', updated_at = NOW() \nWHERE id = $1",
+        "options": {
+          "queryReplacement": "={{ $json.id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        912,
+        0
+      ],
+      "id": "229b34f6-571c-48cd-8c6a-9f923a97cc57",
+      "name": "Mark Sensor Offline",
+      "credentials": {
+        "postgres": {
+          "id": "TDjlfcrzYSZKgZWp",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO alert_history (alert_id, action, new_status, note)\nVALUES ($1, 'CREATED', 'new', 'Auto từ D4')",
+        "options": {
+          "queryReplacement": "={{ $('Create IoT Alert').first().json.id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "315ce270-353e-4842-a223-e55e01f94000",
+      "name": "Log History",
+      "credentials": {
+        "postgres": {
+          "id": "TDjlfcrzYSZKgZWp",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 15minutes": {
+      "main": [
+        [
+          {
+            "node": "Get Active Sensors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Active Sensors": {
+      "main": [
+        [
+          {
+            "node": "Check Offline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Offline": {
+      "main": [
+        [
+          {
+            "node": "Create IoT Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create IoT Alert": {
+      "main": [
+        [
+          {
+            "node": "Mark Sensor Offline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Sensor Offline": {
+      "main": [
+        [
+          {
+            "node": "Log History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "6f0040c8-3bb3-4307-ad1f-05696bbbd769",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e699cbf6a2a899a3a6965687fa5a50117a9f45c4d2698b954b5b84c45d00ff09"
+  },
+  "nodeGroups": [],
+  "id": "lEZae0ZEwscokTbM",
+  "tags": []
+}

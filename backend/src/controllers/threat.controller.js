@@ -11,7 +11,7 @@ exports.getAll = async (req, res) => {
     if (status) { where.push(`status = $${idx++}::varchar`); params.push(status); }
     if (severity) { where.push(`severity = $${idx++}::varchar`); params.push(severity); }
     if (search) {
-      where.push(`(ip_address ILIKE $${idx}::text OR threat_type ILIKE $${idx}::text)`);
+      where.push(`(ip_address ILIKE $${idx}::text OR threat_type ILIKE $${idx}::text OR country ILIKE $${idx}::text OR severity ILIKE $${idx}::text)`);
       params.push(`%${search}%`); idx++;
     }
 

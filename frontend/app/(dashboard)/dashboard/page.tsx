@@ -8,6 +8,7 @@ import {
   Volume2, VolumeX, Bell, RefreshCw, Sparkles
 } from "lucide-react";
 import api from "@/lib/api";
+import AISummaryCard from "@/components/dashboard/AISummaryCard";
 import {
   AreaChart, Area, PieChart as RePie, Pie, Cell,
   ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Legend
@@ -78,6 +79,7 @@ export default function DashboardPage() {
   const [newAlertFlash, setNewAlertFlash] = useState<any>(null);
   const [refreshCountdown, setRefreshCountdown] = useState(3);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [aiSummary, setAiSummary] = useState<any>(null);
   const lastAlertIdRef = useRef<number>(0);
   const isFirstLoadRef = useRef<boolean>(true);
 
@@ -105,6 +107,16 @@ export default function DashboardPage() {
         if (severityRes?.data?.data) setBySeverity(severityRes.data.data);
         if (logsRes?.data?.data) setLiveLogs(logsRes.data.data);
         setLastUpdate(new Date());
+
+        // ✅ Fetch AI Summary từ A9 SOC Copilot
+        try {
+          const aiRes = await api.get("/dashboard/ai-summary");
+          if (aiRes?.data?.data) {
+            setAiSummary(aiRes.data.data);
+          }
+        } catch (e) {
+          console.log("AI Summary chưa có:", e);
+        }
 
         if (alertsRes?.data?.data && alertsRes.data.data.length > 0) {
           const newAlerts = alertsRes.data.data;
@@ -179,6 +191,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* 🤖 AI Summary Card — Từ A9 SOC Copilot */}
+      {aiSummary && <AISummaryCard data={aiSummary} />}
+
       <AnimatePresence>
         {newAlertFlash && (
           <motion.div

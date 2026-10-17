@@ -2,7 +2,7 @@ const fs = require("fs");
 const readline = require("readline");
 const pool = require("../config/database");
 
-const LOG_DIR = "/var/log/riceguard";
+const LOG_DIR = process.env.LOG_DIR || require("path").join(require("os").homedir(), "riceguard", "logs");
 const N8N_BASE = "http://localhost:5678/webhook";
 
 let currentFile = null;

@@ -1,0 +1,229 @@
+{
+  "name": "🌾 RiceGuard - Luồng Tự Động Hóa (Bản Đẹp)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 📥 BƯỚC 1: TIẾP NHẬN\nWebhook nhận dữ liệu thô từ Backend.\n\n**Input:** JSON từ cảm biến / người dùng",
+        "height": 320,
+        "width": 320,
+        "color": 4
+      },
+      "id": "note1",
+      "name": "📌 Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [-320, -120]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "riceguard",
+        "options": {}
+      },
+      "id": "webhook1",
+      "name": "📥 Nhận dữ liệu",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [-100, 0],
+      "webhookId": "riceguard"
+    },
+    {
+      "parameters": {
+        "content": "## 🔍 BƯỚC 2: PHÂN TÍCH\nPhân loại sự cố theo loại & mức độ.\n\n**Logic:** Switch theo `type`",
+        "height": 320,
+        "width": 320,
+        "color": 5
+      },
+      "id": "note2",
+      "name": "📌 Note 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [240, -120]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.type }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "pest",
+              "outputKey": "🐛 Bệnh dịch"
+            },
+            {
+              "value2": "weather",
+              "outputKey": "🌦️ Thời tiết"
+            }
+          ]
+        },
+        "fallbackOutput": "extra"
+      },
+      "id": "switch1",
+      "name": "🔀 Phân loại sự cố",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 2,
+      "position": [400, 0]
+    },
+    {
+      "parameters": {
+        "content": "## 📤 BƯỚC 3: PHẢN HỒI\nGọi API Backend để lưu kết quả & push realtime.\n\n**Endpoint:** `/api/callback`",
+        "height": 320,
+        "width": 320,
+        "color": 6
+      },
+      "id": "note3",
+      "name": "📌 Note 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [800, -120]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/api/callback",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "type",
+              "value": "={{ $json.type }}"
+            },
+            {
+              "name": "severity",
+              "value": "={{ $json.severity }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http1",
+      "name": "📤 Trả kết quả về BE",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [850, 0]
+    },
+    {
+      "parameters": {
+        "content": "## 🔔 BƯỚC 4: CẢNH BÁO\nBắn Telegram cho nông dân nếu mức độ = high",
+        "height": 200,
+        "width": 320,
+        "color": 3
+      },
+      "id": "note4",
+      "name": "📌 Note 4",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [400, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.severity }}",
+              "rightValue": "high",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if1",
+      "name": "⚠️ Mức độ HIGH?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [600, 350]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "🚨 CẢNH BÁO RICEGUARD\nLoại: {{ $json.type }}\nMức độ: {{ $json.severity }}\nNội dung: {{ $json.message }}",
+        "additionalFields": {}
+      },
+      "id": "telegram1",
+      "name": "🔔 Gửi Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [850, 350],
+      "credentials": {
+        "telegramApi": {
+          "id": "1",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "📥 Nhận dữ liệu": {
+      "main": [
+        [
+          {
+            "node": "🔀 Phân loại sự cố",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "🔀 Phân loại sự cố": {
+      "main": [
+        [
+          {
+            "node": "📤 Trả kết quả về BE",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "📤 Trả kết quả về BE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "📤 Trả kết quả về BE": {
+      "main": [
+        [
+          {
+            "node": "⚠️ Mức độ HIGH?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "⚠️ Mức độ HIGH?": {
+      "main": [
+        [
+          {
+            "node": "🔔 Gửi Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

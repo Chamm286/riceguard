@@ -3,6 +3,7 @@ const http = require("http");
 const { Server } = require("socket.io");
 require("dotenv").config();
 const { startLogReader } = require("./services/logReader");
+const { startAlertPoller } = require("./services/alertPoller");
 
 const PORT = process.env.PORT || 5000;
 
@@ -53,4 +54,5 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`🌐 Truy cập từ LAN: http://192.168.40.101:${PORT}`);
   console.log(`🔌 Socket.io ready at ws://0.0.0.0:${PORT}/socket.io`);
   startLogReader();
+  startAlertPoller();
 });

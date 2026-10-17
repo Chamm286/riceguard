@@ -6,3 +6,4 @@
 - Trạng thái: Hoàn thành
 - Ngày: 2026-10-17
 
+### Cập nhật README hướng dẫn

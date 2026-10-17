@@ -9,5 +9,6 @@ router.get('/alerts-by-severity', verifyToken, requireRole('admin', 'analyst'), 
 router.get('/alerts-by-category', verifyToken, requireRole('admin', 'analyst'), dashboardController.getAlertsByCategory);
 router.get('/alerts-timeline', verifyToken, requireRole('admin', 'analyst'), dashboardController.getAlertsTimeline);
 router.get('/recent-alerts', verifyToken, requireRole('admin', 'analyst'), dashboardController.getRecentAlerts);
+router.get('/ai-summary', verifyToken, requireRole('admin', 'analyst'), dashboardController.getAISummary);
 
 module.exports = router;

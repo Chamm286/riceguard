@@ -28,3 +28,11 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+// ============================================
+// AI Summary API (từ A9 SOC Copilot)
+// ============================================
+export const getAISummary = async () => {
+  const res = await api.get('/dashboard/ai-summary');
+  return res.data;
+};

@@ -86,3 +86,41 @@ exports.getRecentAlerts = async (req, res) => {
     res.status(500).json({ success: false, message: 'Lỗi server' });
   }
 };
+
+exports.getAISummary = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        id,
+        time_window,
+        summary,
+        top_threat,
+        affected_targets,
+        recommendation,
+        risk_level,
+        alert_count,
+        threats_count,
+        investigations_count,
+        created_at
+      FROM alerts_summary 
+      ORDER BY id DESC 
+      LIMIT 1
+    `);
+
+    if (!result.rows[0]) {
+      return res.json({
+        success: true,
+        data: null,
+        message: 'Chưa có AI summary. Đợi A9 chạy (5 phút/lần).'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result.rows[0],
+    });
+  } catch (err) {
+    console.error('getAISummary error:', err);
+    res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};

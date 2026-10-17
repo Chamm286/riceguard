@@ -46,6 +46,7 @@ app.use('/api/playbooks', require('./routes/playbook.routes'));
 app.use('/api/compliance', require('./routes/compliance.routes'));
 app.use('/api/workflows', require('./routes/workflow.routes'));
 app.use('/api/notifications', require('./routes/notification.routes'));
+app.use('/api/users', require('./routes/user.routes'));
 app.use('/api/n8n', require('./routes/n8n.routes'));
 app.use('/api/visitors', require('./routes/visitor.routes'));
 app.use('/api/audit', require('./routes/audit.routes'));

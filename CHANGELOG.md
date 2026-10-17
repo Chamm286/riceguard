@@ -6,3 +6,4 @@
 - Trạng thái: Hoàn thành
 - Ngày: 2026-10-17
 
+### Sửa lỗi không hiển thị sai mật khẩu

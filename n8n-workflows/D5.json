@@ -1,0 +1,504 @@
+{
+  "name": "D5 - Weather Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://api.openweathermap.org/data/2.5/forecast?q=Da%20Nang,VN&appid=48666e1b36eb304f37288f00b5dbc80d&units=metric&lang=vi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "caf4b1de-b89b-4eaa-9e35-4a259c098984",
+      "name": "Get Forecast"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst list = data.list || [];\nconst region = 'Quảng Nam';\n\nconst results = [];\nfor (const item of list.slice(0, 8)) {\n  const rain = item.rain?.['3h'] || 0;\n  const wind = item.wind?.speed ? item.wind.speed * 3.6 : 0;  // m/s → km/h\n  const temp = item.main?.temp ?? null;\n  const condition = item.weather?.[0]?.description || '';\n  \n  const isSevere = rain > 50 || wind > 50;\n  \n  results.push({\n    json: {\n      region,\n      source: 'openweathermap',\n      temperature_c: temp,\n      rainfall_mm: rain,\n      wind_speed_kmh: wind,\n      condition_text: condition,\n      is_severe: isSevere,\n      observed_at: item.dt_txt,\n      payload: item,\n      severity: rain > 50 ? 'high' : (wind > 50 ? 'medium' : 'low'),\n      alert_type: rain > 50 ? 'HEAVY_RAIN' : 'STRONG_WIND'\n    }\n  });\n}\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "4a0c7d3f-2094-494e-a09f-68a4543efca8",
+      "name": "Parse Forecast"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO weather_records \n  (region, source, temperature_c, rainfall_mm, wind_speed_kmh, \n   condition_text, is_severe, observed_at, payload)\nVALUES \n  ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb)\nRETURNING id, is_severe",
+        "options": {
+          "queryReplacement": "={{ $json.region }} \n{{ $json.source }} {{ $json.temperature_c }} {{ $json.rainfall_mm }} {{ $json.wind_speed_kmh }} {{ $json.condition_text }}\n{{ $json.is_severe }}\n{{ $json.observed_at }}\n={{ JSON.stringify($json.payload) }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        672,
+        0
+      ],
+      "id": "cad803c2-3ecf-48f1-8162-6352de5e7f9b",
+      "name": "Save Weather Record",
+      "credentials": {
+        "postgres": {
+          "id": "TDjlfcrzYSZKgZWp",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "20546d72-b643-4867-a18e-80605a074e64",
+      "name": "Every 1 hour"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8d2ee0a1-c893-4231-97ff-906f7c5e9e4f",
+              "leftValue": "={{ $json.is_severe }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        0
+      ],
+      "id": "cd5b4c5b-4db3-4894-81b8-2665e1753f89",
+      "name": "Is Severe"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id FROM alerts\nWHERE source_workflow = 'D5'\n  AND region = $1\n  AND status IN ('new', 'reviewing')\n  AND created_at > NOW() - INTERVAL '6 hours'\nLIMIT 1",
+        "options": {
+          "queryReplacement": "={{ $('Parse Forecast').first().json.region }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1120,
+        96
+      ],
+      "id": "f791518b-b66f-4cea-8247-267dda8bc14d",
+      "name": "Check Existing Alert",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "TDjlfcrzYSZKgZWp",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4d6ab2d1-09fb-4ce8-b24f-8a18a601ac73",
+              "leftValue": "={{ $json.id }} ",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1344,
+        96
+      ],
+      "id": "65a5eb56-da04-4c2e-8052-5f811040e3a6",
+      "name": "No Recent Alert?"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "alerts",
+          "mode": "list",
+          "cachedResultName": "alerts"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "alert_type": "={{ $('Parse Forecast').first().json.alert_type }}",
+            "category": "agriculture",
+            "severity": "={{ $('Parse Forecast').first().json.severity }}",
+            "title": "==Cảnh báo thời tiết: {{ $('Parse Forecast').first().json.condition_text }}",
+            "description": "==Mưa {{ $('Parse Forecast').first().json.rainfall_mm }}mm, gió {{ $('Parse Forecast').first().json.wind_speed_kmh }}km/h",
+            "source_workflow": "D5",
+            "region": "={{ $('Parse Forecast').first().json.region }}",
+            "metadata": "={{ JSON.stringify({rain: $('Parse Forecast').first().json.rainfall_mm, wind: $('Parse Forecast').first().json.wind_speed_kmh}) }}",
+            "status": "new"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "feature_id",
+              "displayName": "feature_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "field_id",
+              "displayName": "field_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "alert_type",
+              "displayName": "alert_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "severity",
+              "displayName": "severity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ip_address",
+              "displayName": "ip_address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "predicted_at",
+              "displayName": "predicted_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "lead_time_minutes",
+              "displayName": "lead_time_minutes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "source_workflow",
+              "displayName": "source_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "region",
+              "displayName": "region",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "metadata",
+              "displayName": "metadata",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "resolved_at",
+              "displayName": "resolved_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "resolved_by",
+              "displayName": "resolved_by",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "resolution_note",
+              "displayName": "resolution_note",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1568,
+        192
+      ],
+      "id": "a100e6be-df37-4972-a621-d44cbacfcaed",
+      "name": "Create Weather Alert",
+      "credentials": {
+        "postgres": {
+          "id": "TDjlfcrzYSZKgZWp",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get Forecast": {
+      "main": [
+        [
+          {
+            "node": "Parse Forecast",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Forecast": {
+      "main": [
+        [
+          {
+            "node": "Save Weather Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 1 hour": {
+      "main": [
+        [
+          {
+            "node": "Get Forecast",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Weather Record": {
+      "main": [
+        [
+          {
+            "node": "Is Severe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Severe": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Check Existing Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing Alert": {
+      "main": [
+        [
+          {
+            "node": "No Recent Alert?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "No Recent Alert?": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Create Weather Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "b829ef3a-93f8-4daa-9e5a-7cf71070990c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e699cbf6a2a899a3a6965687fa5a50117a9f45c4d2698b954b5b84c45d00ff09"
+  },
+  "nodeGroups": [],
+  "id": "oF0k3X6XtvzqmJ8X",
+  "tags": []
+}

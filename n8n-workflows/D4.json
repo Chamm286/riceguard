@@ -1,5 +1,5 @@
 {
-  "name": "D4 | IoT Sensor Offline Monitor.",
+  "name": "D4 | IoT Sensor Offline Monitor ",
   "nodes": [
     {
       "parameters": {
@@ -15,25 +15,25 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.4,
       "position": [
-        0,
-        0
+        -1440,
+        96
       ],
-      "id": "8ff02f1e-d7d3-4727-89b5-e58aded77e3d",
+      "id": "dfc53788-64c8-458d-a98e-65f59509b5c2",
       "name": "Every 15minutes"
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT \n  s.id, s.sensor_code, s.sensor_type, s.field_id, s.last_seen_at, s.status,\n  f.region,\n  EXTRACT(EPOCH FROM (NOW() - s.last_seen_at)) / 60 AS minutes_ago\nFROM iot_sensors s\nLEFT JOIN fields f ON f.id = s.field_id\nWHERE s.status IN ('active', 'offline')",
+        "query": "SELECT\n  s.id, s.sensor_code, s.sensor_type, s.field_id, s.last_seen_at, s.status,\n  f.region,\n  CASE WHEN s.last_seen_at IS NOT NULL\n       THEN EXTRACT(EPOCH FROM (NOW() - s.last_seen_at)) / 60\n       ELSE NULL END AS minutes_ago\nFROM iot_sensors s\nLEFT JOIN fields f ON f.id = s.field_id\nWHERE s.status IN ('active', 'offline')",
         "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        224,
-        0
+        -1264,
+        96
       ],
-      "id": "7f66c461-a2b5-4c8a-a9bd-dcbde8320bd2",
+      "id": "897559a3-12c1-4405-928e-c04b79dfe620",
       "name": "Get Active Sensors",
       "credentials": {
         "postgres": {
@@ -44,32 +44,229 @@
     },
     {
       "parameters": {
-        "jsCode": "const now = Date.now();\nconst THRESHOLD_MIN = 30;\n\nreturn $input.all()\n  .map(item => {\n    const s = item.json;\n    if (!s.last_seen_at) {\n      return { json: { ...s, minutes_ago: null, offline: true, reason: 'Chưa từng gửi dữ liệu' } };\n    }\n    const lastSeen = new Date(s.last_seen_at).getTime();\n    const minutesAgo = (now - lastSeen) / 60000;\n    const offline = minutesAgo > THRESHOLD_MIN;\n    return {\n      json: {\n        ...s,\n        minutes_ago: Math.round(minutesAgo),\n        offline,\n        reason: offline ? `Không gửi dữ liệu ${Math.round(minutesAgo)} phút` : 'OK'\n      }\n    };\n  })\n  .filter(x => x.json.offline);"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        448,
-        0
-      ],
-      "id": "b4e1482e-729f-490f-88de-ebf2025a91d7",
-      "name": "Check Offline"
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO alerts \n  (field_id, alert_type, category, severity, title, description, \n   source_workflow, region, status, metadata)\nVALUES \n  ($1, 'IOT_OFFLINE', 'agriculture', 'medium', $2, $3, 'D4', $4, 'new', $5::jsonb)\nRETURNING id",
-        "options": {
-          "queryReplacement": "={{ $json.field_id }}, =Cảm biến {{ $json.sensor_code }} offline, {{ $json.reason }}, {{ $json.region }}, ={{ JSON.stringify({sensor_id: $json.id, sensor_code: $json.sensor_code, minutes_ago: $json.minutes_ago}) }}"
-        }
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "alerts",
+          "mode": "list",
+          "cachedResultName": "alerts"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "field_id": "={{ $('Validate & Filter Offline Sensors').item.json.field_id }}",
+            "alert_type": "IOT_OFFLINE",
+            "category": "agriculture",
+            "severity": "={{ $json.output.severity }}",
+            "title": "={{ 'Cảm biến ' + $('Validate & Filter Offline Sensors').item.json.sensor_code + ' offline' }}",
+            "description": "={{ $json.output.reason }}",
+            "source_workflow": "D4",
+            "region": "={{ $('Validate & Filter Offline Sensors').item.json.region }}",
+            "metadata": "={{ { sensor_id: $('Validate & Filter Offline Sensors').item.json.id, sensor_code: $('Validate & Filter Offline Sensors').item.json.sensor_code, minutes_ago: $('Validate & Filter Offline Sensors').item.json.minutes_ago } }}",
+            "status": "new"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "feature_id",
+              "displayName": "feature_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "field_id",
+              "displayName": "field_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "alert_type",
+              "displayName": "alert_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "severity",
+              "displayName": "severity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "description",
+              "displayName": "description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ip_address",
+              "displayName": "ip_address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "predicted_at",
+              "displayName": "predicted_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "lead_time_minutes",
+              "displayName": "lead_time_minutes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source_workflow",
+              "displayName": "source_workflow",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "region",
+              "displayName": "region",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "metadata",
+              "displayName": "metadata",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resolved_at",
+              "displayName": "resolved_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resolved_by",
+              "displayName": "resolved_by",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resolution_note",
+              "displayName": "resolution_note",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        672,
-        0
+        208,
+        64
       ],
-      "id": "0dbb4332-9a01-45d3-b7c1-9b7684435342",
+      "id": "aad17238-8cbc-4b5b-ab6a-f3cdc1090b69",
       "name": "Create IoT Alert",
       "credentials": {
         "postgres": {
@@ -81,18 +278,18 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE iot_sensors \nSET status = 'offline', updated_at = NOW() \nWHERE id = $1",
+        "query": "UPDATE iot_sensors\nSET status = 'offline', updated_at = NOW()\nWHERE id = $1",
         "options": {
-          "queryReplacement": "={{ $json.id }}"
+          "queryReplacement": "={{ $('Validate & Filter Offline Sensors').item.json.id }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        912,
-        0
+        464,
+        80
       ],
-      "id": "229b34f6-571c-48cd-8c6a-9f923a97cc57",
+      "id": "006fda8d-b1b3-4b99-aa5d-5d5f486cb49e",
       "name": "Mark Sensor Offline",
       "credentials": {
         "postgres": {
@@ -112,11 +309,197 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.7,
       "position": [
-        1120,
-        0
+        720,
+        80
       ],
-      "id": "315ce270-353e-4842-a223-e55e01f94000",
+      "id": "9fbcad49-beb1-4da4-8b19-f0134b280942",
       "name": "Log History",
+      "credentials": {
+        "postgres": {
+          "id": "TDjlfcrzYSZKgZWp",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Bạn là trợ lý phân tích sự cố cảm biến IoT nông nghiệp. Bản ghi đầu vào đã được Code node xác nhận hợp lệ và offline quá 30 phút.\n- Sensor ID: {{ $json.id }}\n- Mã cảm biến: {{ $json.sensor_code }}\n- Loại cảm biến: {{ $json.sensor_type }}\n- Khu vực: {{ $json.region || 'Chưa xác định' }}\n- Trạng thái hiện tại: {{ $json.status }}\n- Số phút kể từ lần nhận dữ liệu cuối: {{ $json.minutes_ago }}\n\nQuy tắc severity:\n1. Trên 180 phút: critical.\n2. Trên 60 đến 180 phút: high.\n3. Trên 30 đến 60 phút: medium.\n4. Nếu khu vực là Quảng Nam (không phân biệt hoa thường), tăng một bậc: medium -> high, high -> critical; critical giữ nguyên.\n5. needs_alert luôn là true với bản ghi được gửi tới bạn.\n6. Không bịa nguyên nhân kỹ thuật; reason phải nêu đây là cảnh báo dựa trên thời gian mất tín hiệu và khuyến nghị kiểm tra nguồn điện, kết nối mạng, gateway hoặc thiết bị.\nTrả về đúng cấu trúc JSON theo Output Parser.",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -912,
+        96
+      ],
+      "id": "af445fbb-3fc5-47f3-8c99-f932768b8384",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        -1040,
+        304
+      ],
+      "id": "a08b9088-a8c0-460a-b39f-f03c911a79a1",
+      "name": "Gemini API",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "UnD2Sjsg9CRhyays",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.3,
+      "position": [
+        -752,
+        304
+      ],
+      "id": "95be647d-65ad-4dc7-870f-1a63390fb723",
+      "name": "Code Tool"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"needs_alert\": true,\n  \"severity\": \"medium\",\n  \"reason\": \"Cảm biến đã mất tín hiệu hơn 30 phút; cần kiểm tra nguồn điện, kết nối mạng và gateway.\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -528,
+        320
+      ],
+      "id": "0e2fea71-9ca6-40a8-ac6e-7bbfd7cf20d9",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "const OFFLINE_THRESHOLD_MINUTES = 30;\nconst items = $input.all();\nconst now = Date.now();\n\nreturn items.flatMap((item, index) => {\n  const s = item.json;\n  // Ignore incomplete records safely; no timestamp means offline duration cannot be trusted.\n  if (s.id == null || !s.sensor_code || !s.last_seen_at) return [];\n  const lastSeen = new Date(s.last_seen_at).getTime();\n  if (!Number.isFinite(lastSeen) || lastSeen > now) return [];\n\n  const minutesAgo = Math.max(0, (now - lastSeen) / 60000);\n  if (minutesAgo <= OFFLINE_THRESHOLD_MINUTES) return [];\n\n  return [{\n    json: { ...s, minutes_ago: Number(minutesAgo.toFixed(2)), offline_threshold_minutes: OFFLINE_THRESHOLD_MINUTES },\n    pairedItem: { item: index }\n  }];\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1088,
+        96
+      ],
+      "id": "aa4eacd8-ebe4-4506-810e-7a91f66cb2b2",
+      "name": "Validate & Filter Offline Sensors"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c3479442-9653-407b-b19e-e5e91f38bf86",
+              "leftValue": "={{ $json.output.needs_alert === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -512,
+        96
+      ],
+      "id": "aa7823c3-4e73-4cdb-97ab-5d38d145e257",
+      "name": "IF - Needs Alert?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  EXISTS (\n    SELECT 1 FROM alerts\n    WHERE alert_type = 'IOT_OFFLINE'\n      AND status = 'new'\n      AND metadata->>'sensor_id' = $1\n  ) AS exists,\n  (\n    SELECT id FROM alerts\n    WHERE alert_type = 'IOT_OFFLINE'\n      AND status = 'new'\n      AND metadata->>'sensor_id' = $1\n    ORDER BY created_at DESC\n    LIMIT 1\n  ) AS alert_id",
+        "options": {
+          "queryReplacement": "={{ String($('Validate & Filter Offline Sensors').item.json.id) }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        -288,
+        -128
+      ],
+      "id": "01b5835d-81c4-4f08-bb8e-38db8e0984e0",
+      "name": "Check Existing IoT Alert",
+      "credentials": {
+        "postgres": {
+          "id": "TDjlfcrzYSZKgZWp",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f1224183-fe2d-45a7-8b7a-246f7016e51f",
+              "leftValue": "={{ $json.exists === true || $json.exists === 'true' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -32,
+        -128
+      ],
+      "id": "520f965e-51fb-4696-a24f-46b8ca56682a",
+      "name": "IF - Existing Alert?"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE iot_sensors SET status = 'offline', updated_at = NOW() WHERE id = $1",
+        "options": {
+          "queryReplacement": "={{ $('Validate & Filter Offline Sensors').item.json.id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        192,
+        -144
+      ],
+      "id": "13e1f7fe-c32b-406e-8adf-ee5f2bc5ce0a",
+      "name": "Mark Existing Sensor Offline",
       "credentials": {
         "postgres": {
           "id": "TDjlfcrzYSZKgZWp",
@@ -142,15 +525,66 @@
       "main": [
         [
           {
-            "node": "Check Offline",
+            "node": "Validate & Filter Offline Sensors",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Check Offline": {
+    "Validate & Filter Offline Sensors": {
       "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "IF - Needs Alert?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Needs Alert?": {
+      "main": [
+        [
+          {
+            "node": "Check Existing IoT Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Existing IoT Alert": {
+      "main": [
+        [
+          {
+            "node": "IF - Existing Alert?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Existing Alert?": {
+      "main": [
+        [
+          {
+            "node": "Mark Existing Sensor Offline",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Create IoT Alert",
@@ -181,20 +615,52 @@
           }
         ]
       ]
+    },
+    "Gemini API": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
     "availableInMCP": true
   },
-  "versionId": "6f0040c8-3bb3-4307-ad1f-05696bbbd769",
+  "versionId": "33487520-d9f3-4306-a082-24d9d8f4227b",
   "meta": {
-    "templateCredsSetupCompleted": true,
     "instanceId": "e699cbf6a2a899a3a6965687fa5a50117a9f45c4d2698b954b5b84c45d00ff09"
   },
   "nodeGroups": [],
-  "id": "lEZae0ZEwscokTbM",
+  "id": "TXDQ0NJlZJVbeDod",
   "tags": []
 }

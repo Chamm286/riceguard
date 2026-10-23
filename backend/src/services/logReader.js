@@ -137,25 +137,47 @@ async function processLog(log) {
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 5000);
 
+          // Thống kê nhanh cho metrics
+          const stats = await pool.query(`
+            SELECT COUNT(*)::int AS total,
+                   COUNT(*) FILTER (WHERE severity='critical')::int AS critical,
+                   COUNT(*) FILTER (WHERE severity='high')::int AS high,
+                   COUNT(DISTINCT ip_address)::int AS unique_ips
+            FROM alerts WHERE created_at > NOW() - INTERVAL '24 hours'
+          `);
+          const m = stats.rows[0] || {};
+
+          const payload = {
+            event_id: `evt-${alert.id}`,
+            timestamp: new Date(alert.created_at).toISOString(),
+            severity: String(alert.severity || 'medium').toUpperCase(),
+            source: {
+              ip: analysis.ip_address || 'unknown',
+              country: log.country || 'Unknown',
+              port: log.port || 443,
+            },
+            target: {
+              ip: log.target_ip || '10.0.0.5',
+              service: log.service || 'HTTP',
+            },
+            threat_info: {
+              type: analysis.category || 'security_event',
+              description: alert.description || analysis.message || '',
+              recommendation: 'Review and block source IP if malicious',
+            },
+            metrics: {
+              total_alerts: m.total || 0,
+              critical_count: m.critical || 0,
+              high_count: m.high || 0,
+              unique_ips: m.unique_ips || 0,
+            },
+            status: 'NEW',
+          };
+
           const res = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              ip: analysis.ip_address || "unknown",
-              path: log.originalUrl || log.path || log.request_uri || "",
-              query: log.query || "",
-              payload: analysis.message || "",
-              user_agent: log.http_user_agent || log.user_agent || "",
-              event: analysis.category === "brute_force" ? "ssh_failed" : (analysis.category === "port_scan" ? "port_scan" : undefined),
-              failed_count: analysis.category === "brute_force" ? 5 : undefined,
-              ports_count: analysis.category === "port_scan" ? 10 : undefined,
-              alert_id: alert.id,
-              category: analysis.category,
-              title: alert.title,
-              severity: alert.severity,
-              message: alert.description,
-              created_at: alert.created_at,
-            }),
+            body: JSON.stringify(payload),
             signal: controller.signal,
           });
 

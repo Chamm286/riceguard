@@ -158,3 +158,30 @@ Dự án phát hành dưới giấy phép MIT License — xem file LICENSE.
 🌟 RiceGuard — Bảo vệ mùa màng & Bảo vệ hệ thống 🌟
 
 Made with ❤️ by RiceGuard Team
+
+## 🧪 Chạy & Test nhanh
+
+### Khởi động
+```bash
+cd backend && npm run dev
+cd frontend && npm run dev
+cd ai-model && source venv/bin/activate && python app.py
+cd ~/n8n-safe && set -a && . ./n8n.env && set +a && n8n start
+```
+
+### Test luồng SOC Alert Triage
+```bash
+curl -X POST http://localhost:5678/webhook/security-event \
+  -H 'Content-Type: application/json' \
+  -d '{"ip":"7.7.7.7","path":"/?id=1 union select","payload":"union select","user_agent":"sqlmap"}'
+```
+
+### Cấu hình Telegram/Gmail
+- Telegram node: chatId `7893336271`, credential Telegram account (token bot).
+- Gmail node (Daily Report): điền email + app password trong credential Gmail.
+
+### Luồng n8n
+- SOC Alert Triage: phát hiện tấn công, block IP, cảnh báo Telegram.
+- Rice Disease Diagnosis: phân tích ảnh lá lúa, cảnh báo nông dân.
+- Sentinel-2 Sync: đồng bộ vệ tinh, NDVI/NDRE.
+- Daily Security Report: báo cáo 24h, Telegram/Gmail.

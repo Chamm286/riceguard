@@ -1,187 +1,71 @@
 # 🌾 RiceGuard
 
-**Hệ thống cảnh báo sớm dịch bệnh lúa & Giám sát an ninh mạng**
-
-[![Next.js](https://img.shields.io/badge/Next.js-15.1-black?logo=next.js&logoColor=white)](https://nextjs.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-24-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![n8n](https://img.shields.io/badge/n8n-2.41-EA4B71?logo=n8n&logoColor=white)](https://n8n.io/)
-[![Gemini](https://img.shields.io/badge/Gemini-3.8_Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-24-339933?logo=node.js)](https://nodejs.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql)](https://www.postgresql.org/)
+[![n8n](https://img.shields.io/badge/n8n-2.41-EA4B71?logo=n8n)](https://n8n.io/)
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python)](https://python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> Nền tảng AI tích hợp giúp **nông dân** phát hiện sớm dịch bệnh trên lúa và hỗ trợ **đội ngũ an ninh mạng** giám sát, ngăn chặn tấn công theo thời gian thực.
+> Nền tảng AI + Automation giám sát an ninh mạng và cảnh báo sớm dịch bệnh cây lúa từ ảnh viễn thám Sentinel-2.
 
----
+## Kiến trúc
+```
+User → Next.js (3000) → Node.js API (5000) → PostgreSQL (5432)
+                          ↓
+                         n8n (5678) → Telegram / Gmail
+                          ↓
+                     AI Service (5001) → Gemini / Flask
+```
 
-## 📖 Giới thiệu
-
-**RiceGuard** là hệ thống full-stack kết hợp **Trí tuệ nhân tạo (AI)** và **tự động hóa quy trình (n8n)** để giải quyết hai bài toán:
-
-| Lĩnh vực | Mục tiêu |
-|----------|----------|
-| 🌾 **Nông nghiệp** | Chẩn đoán bệnh lúa qua ảnh bằng Gemini AI, phân tích vệ tinh (NDVI), cảnh báo Telegram |
-| 🔒 **An ninh mạng** | Phát hiện tấn công (SQLi, XSS, SSH Brute Force, Port Scan...), auto block IP, giám sát visitor |
-
-Hệ thống theo kiến trúc **microservices**, tách biệt **Frontend (Next.js)** — **Backend API (Node.js)** — **Workflow Engine (n8n)** — **Database (PostgreSQL)**, đảm bảo khả năng mở rộng và triển khai độc lập.
-
----
-
-## ✨ Tính năng nổi bật
-
-### 🌾 Phân hệ Nông nghiệp
-- **Chẩn đoán bệnh lúa bằng AI**: Upload ảnh → Gemini Vision phân tích → trả về loại bệnh, mức độ, đề xuất thuốc.
-- **Phân tích vệ tinh**: Tính chỉ số **NDVI** đánh giá sức khỏe cây trồng theo vùng.
-- **Cảnh báo tự động**: Gửi thông báo qua **Telegram Bot** khi phát hiện bệnh.
-- **Dashboard trực quan**: Bản đồ heatmap dịch bệnh + biểu đồ thống kê.
-
-### 🔒 Phân hệ An ninh mạng
-- **Phát hiện tấn công**: SQL Injection, XSS, Path Traversal, Command Injection, SSH Brute Force, Port Scan.
-- **Auto Block IP**: Tự động thêm IP độc hại vào firewall.
-- **Báo cáo hàng ngày**: Tổng hợp sự kiện qua email/Telegram.
-- **SOC Dashboard**: Giám sát realtime + bản đồ tấn công GeoIP.
-
----
-
-## 🏗️ Kiến trúc hệ thống
-Người dùng → Next.js Frontend → Node.js API → PostgreSQL
-↓
-n8n Workflow Engine
-↓
-┌─────────────────┼─────────────────┐
-▼ ▼ ▼
-Telegram Firewall Gemini
-Bot (iptables) AI
-
----
-
-## 🛠️ Công nghệ sử dụng
-
-| Thành phần | Công nghệ |
-|------------|-----------|
-| **Frontend** | Next.js 15.1, TailwindCSS, Chart.js, Leaflet |
-| **Backend** | Node.js 24, Express.js 5, Prisma ORM, JWT |
-| **Database** | PostgreSQL 18 |
-| **Workflow** | n8n 2.41 |
-| **AI** | Google Gemini 3.8 Flash (Vision + LLM) |
-| **DevOps** | Docker, Docker Compose, Nginx |
-
----
-
-## 🚀 Cài đặt nhanh
-
-### Yêu cầu
-- Node.js ≥ 24 · PostgreSQL ≥ 18 · Docker ≥ 27 · Git
-
-### Các bước
-
+## Cài đặt Local
 ```bash
-# 1. Clone
-git clone https://github.com/Chamm286/riceguard.git
-cd riceguard
-
-# 2. Backend
-cd backend
-npm install
-cp .env.example .env
-npx prisma migrate dev
-npm run dev              # → http://localhost:3001
-
-# 3. Frontend
-cd ../frontend
-npm install
-cp .env.example .env.local
-npm run dev              # → http://localhost:3000
-
-# 4. n8n
-docker run -d --name riceguard-n8n \
-  -p 5678:5678 \
-  -v n8n_data:/home/node/.n8n \
-  n8nio/n8n:2.41.5       # → http://localhost:5678
-🐳 Chạy toàn bộ bằng Docker Compose
-docker-compose up -d
-Service	URL
-Frontend	http://localhost:3000
-Backend API	http://localhost:3001
-n8n	http://localhost:5678
-PostgreSQL	localhost:5432
-⚙️ Cấu hình môi trường
-Backend — .env
-NODE_ENV=development
-PORT=3001
-DATABASE_URL="postgresql://riceguard:password@localhost:5432/riceguard"
-JWT_SECRET=your_super_secret_key
-GEMINI_API_KEY=AIzaSy...
-N8N_WEBHOOK_URL=http://localhost:5678/webhook
-TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
-SMTP_HOST=smtp.gmail.com
-SMTP_USER=your_email@gmail.com
-SMTP_PASS=your_app_password
-Frontend — .env.local
-NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
-NEXT_PUBLIC_N8N_URL=http://localhost:5678
-📂 Cấu trúc thư mục
-riceguard/
-├── backend/              # Node.js API + Prisma
-├── frontend/             # Next.js App Router
-├── n8n-workflows/
-│   ├── agri/             # D1, D3, D4
-│   └── security/         # A1 → A8
-├── docs/                 # Tài liệu kiến trúc, API
-├── docker-compose.yml
-├── LICENSE
-└── README.md
-👥 Đội ngũ phát triển
-Họ và tên	Vai trò	Trách nhiệm
-Nguyễn Thị Bích Trâm	🎯 Leader — Backend	Điều phối dự án, thiết kế API, nghiệp vụ cốt lõi
-Tống Mỹ Trà	🎨 Frontend	UI/UX, dashboard, tích hợp API
-Trần Anh Tuấn	⚙️ Backend	Service, tích hợp AI, xử lý dữ liệu
-Nguyễn Hữu Thuận	🚀 DevOps / n8n	Workflow, CI/CD, hạ tầng
-🤝 Đóng góp
-
-    Fork repo
-
-    Tạo nhánh: git checkout -b feature/AmazingFeature
-
-    Commit: git commit -m 'feat: add AmazingFeature'
-
-    Push: git push origin feature/AmazingFeature
-
-    Mở Pull Request
-
-Quy ước commit (Conventional Commits)
-
-feat: · fix: · docs: · style: · refactor: · test: · chore:
-📄 Giấy phép
-
-Dự án phát hành dưới giấy phép MIT License — xem file LICENSE.
-
-🌟 RiceGuard — Bảo vệ mùa màng & Bảo vệ hệ thống 🌟
-
-Made with ❤️ by RiceGuard Team
-
-## 🧪 Chạy & Test nhanh
-
-### Khởi động
-```bash
-cd backend && npm run dev
-cd frontend && npm run dev
-cd ai-model && source venv/bin/activate && python app.py
+# Backend
+cd backend && npm install && npm run dev
+# Frontend
+cd frontend && npm install && npm run dev
+# AI Service
+cd ai-model && python -m venv venv && source venv/bin/activate && pip install -r requirements.txt && python app.py
+# n8n
 cd ~/n8n-safe && set -a && . ./n8n.env && set +a && n8n start
 ```
 
-### Test luồng SOC Alert Triage
+## Docker
 ```bash
+docker compose up -d
+```
+
+## Test nhanh
+```bash
+# Security event
 curl -X POST http://localhost:5678/webhook/security-event \
   -H 'Content-Type: application/json' \
   -d '{"ip":"7.7.7.7","path":"/?id=1 union select","payload":"union select","user_agent":"sqlmap"}'
+
+# Rice report
+IMG=$(ls backend/uploads | head -1)
+curl -X POST http://localhost:5678/webhook/new-report \
+  -H 'Content-Type: application/json' \
+  -d "{\"id\":999,\"user_id\":1,\"title\":\"test leaf\",\"description\":\"test\",\"image_url\":\"/uploads/$IMG\"}"
 ```
 
-### Cấu hình Telegram/Gmail
-- Telegram node: chatId `7893336271`, credential Telegram account (token bot).
-- Gmail node (Daily Report): điền email + app password trong credential Gmail.
+## Luồng n8n (4 luồng chính)
+1. **SOC Alert Triage** – phát hiện tấn công, block IP, cảnh báo Telegram.
+2. **Rice Disease Diagnosis** – phân tích ảnh lá lúa, cảnh báo nông dân.
+3. **Sentinel-2 Sync** – đồng bộ vệ tinh, NDVI/NDRE, dự đoán.
+4. **Daily Security Report** – báo cáo 24h, Telegram + Gmail.
 
-### Luồng n8n
-- SOC Alert Triage: phát hiện tấn công, block IP, cảnh báo Telegram.
-- Rice Disease Diagnosis: phân tích ảnh lá lúa, cảnh báo nông dân.
-- Sentinel-2 Sync: đồng bộ vệ tinh, NDVI/NDRE.
-- Daily Security Report: báo cáo 24h, Telegram/Gmail.
+## Cấu hình Telegram/Gmail
+- Telegram node: chatId `7893336271`, credential Telegram account.
+- Gmail node: credential Gmail (email + app password).
+
+## Tính năng AI
+- Flask AI service phân tích ảnh lá lúa và dữ liệu Sentinel-2.
+- Dashboard hiển thị AI summary từ `alerts_summary`.
+
+## Ports
+- Frontend: 3000
+- Backend: 5000
+- AI Service: 5001
+- n8n: 5678
+- PostgreSQL: 5432

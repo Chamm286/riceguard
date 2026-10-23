@@ -32,9 +32,9 @@ exports.blockIPFromN8n = async (req, res) => {
     if (!ip_address) return res.status(400).json({ success: false, message: 'Thiếu ip_address' });
 
     await pool.query(
-      `INSERT INTO blocked_ips (ip_address, reason, blocked_at)
+      `INSERT INTO blocked_ips (ip, reason, created_at)
        VALUES ($1, $2, NOW())
-       ON CONFLICT (ip_address) DO UPDATE SET reason = EXCLUDED.reason, blocked_at = NOW()`,
+       ON CONFLICT (ip) DO UPDATE SET reason = EXCLUDED.reason, created_at = NOW()`,
       [ip_address, reason || 'Blocked by n8n']
     );
 

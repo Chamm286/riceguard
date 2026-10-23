@@ -49,6 +49,7 @@ app.use('/api/notifications', require('./routes/notification.routes'));
 app.use('/api/users', require('./routes/user.routes'));
 app.use('/api/n8n', require('./routes/n8n.routes'));
 app.use('/api/visitors', require('./routes/visitor.routes'));
+app.use('/api/settings', require('./routes/settings.routes'));
 app.use('/api/audit', require('./routes/audit.routes'));
 app.use('/api/satellite', require('./routes/satellite.routes'));
 app.use('/api/firewall', require('./routes/firewall.routes'));

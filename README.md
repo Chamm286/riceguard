@@ -1,160 +1,109 @@
+<div align="center">
+
 # 🌾 RiceGuard
 
-**Hệ thống cảnh báo sớm dịch bệnh lúa & Giám sát an ninh mạng**
+**Nền tảng giám sát an ninh mạng, phát hiện xâm nhập và tự động cảnh báo cho hệ thống cảnh báo sớm dịch bệnh cây lúa từ ảnh viễn thám Sentinel-2**
 
-[![Next.js](https://img.shields.io/badge/Next.js-15.1-black?logo=next.js&logoColor=white)](https://nextjs.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-24-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![n8n](https://img.shields.io/badge/n8n-2.41-EA4B71?logo=n8n&logoColor=white)](https://n8n.io/)
-[![Gemini](https://img.shields.io/badge/Gemini-3.8_Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+*Đề tài 25 – Cybersecurity Automation*
 
-> Nền tảng AI tích hợp giúp **nông dân** phát hiện sớm dịch bệnh trên lúa và hỗ trợ **đội ngũ an ninh mạng** giám sát, ngăn chặn tấn công theo thời gian thực.
+</div>
 
 ---
 
-## 📖 Giới thiệu
+## Giới thiệu
 
-**RiceGuard** là hệ thống full-stack kết hợp **Trí tuệ nhân tạo (AI)** và **tự động hóa quy trình (n8n)** để giải quyết hai bài toán:
+RiceGuard gồm hai phân hệ chạy trên cùng một nền tảng:
 
-| Lĩnh vực | Mục tiêu |
-|----------|----------|
-| 🌾 **Nông nghiệp** | Chẩn đoán bệnh lúa qua ảnh bằng Gemini AI, phân tích vệ tinh (NDVI), cảnh báo Telegram |
-| 🔒 **An ninh mạng** | Phát hiện tấn công (SQLi, XSS, SSH Brute Force, Port Scan...), auto block IP, giám sát visitor |
+| Phân hệ | Mục tiêu |
+| :--- | :--- |
+| 🌾 Nông nghiệp | Nông dân upload ảnh lúa, AI chẩn đoán bệnh, phân tích ảnh vệ tinh, cảnh báo Telegram |
+| 🔒 An ninh mạng | Phát hiện tấn công vào chính hệ thống, ghi cảnh báo, tự động chặn IP, báo cáo cho quản trị viên |
 
-Hệ thống theo kiến trúc **microservices**, tách biệt **Frontend (Next.js)** — **Backend API (Node.js)** — **Workflow Engine (n8n)** — **Database (PostgreSQL)**, đảm bảo khả năng mở rộng và triển khai độc lập.
+Đề tài 25 tập trung vào phân hệ **an ninh mạng**: bảo vệ web, API và dữ liệu của hệ thống cảnh báo dịch bệnh.
 
----
+## Kiến trúc
 
-## ✨ Tính năng nổi bật
+~~~text
+ Người dùng ──> Next.js Frontend (:3000)
+                     │
+                     ▼
+              Node.js API (:5000) ───> PostgreSQL (:5432)
+                     │
+                     │  sự kiện bảo mật
+                     ▼
+              n8n (:5678)  webhook /security-event
+                     │
+        ┌────────────┼─────────────┐
+        ▼            ▼             ▼
+   Lưu alert     Telegram     Chặn IP (backend)
+~~~
 
-### 🌾 Phân hệ Nông nghiệp
-- **Chẩn đoán bệnh lúa bằng AI**: Upload ảnh → Gemini Vision phân tích → trả về loại bệnh, mức độ, đề xuất thuốc.
-- **Phân tích vệ tinh**: Tính chỉ số **NDVI** đánh giá sức khỏe cây trồng theo vùng.
-- **Cảnh báo tự động**: Gửi thông báo qua **Telegram Bot** khi phát hiện bệnh.
-- **Dashboard trực quan**: Bản đồ heatmap dịch bệnh + biểu đồ thống kê.
+## Pipeline an ninh (một luồng n8n, nhiều node)
 
-### 🔒 Phân hệ An ninh mạng
-- **Phát hiện tấn công**: SQL Injection, XSS, Path Traversal, Command Injection, SSH Brute Force, Port Scan.
-- **Auto Block IP**: Tự động thêm IP độc hại vào firewall.
-- **Báo cáo hàng ngày**: Tổng hợp sự kiện qua email/Telegram.
-- **SOC Dashboard**: Giám sát realtime + bản đồ tấn công GeoIP.
+~~~text
+Webhook ─> Detect Attack ─> Detected? ─> Save Alert ─> Count Alerts 1h ─┬─> Telegram Alert
+                                                                        └─> Repeat >= 5? ─> Block IP
+~~~
 
----
+Node **Detect Attack** chứa toàn bộ rule: SQL Injection, XSS, Path Traversal, Command Injection, SSH Brute Force, Port Scan, kèm whitelist IP. Khi cùng một IP có từ 5 cảnh báo trong 1 giờ, hệ thống gọi backend để chặn IP đó.
 
-## 🏗️ Kiến trúc hệ thống
-Người dùng → Next.js Frontend → Node.js API → PostgreSQL
-↓
-n8n Workflow Engine
-↓
-┌─────────────────┼─────────────────┐
-▼ ▼ ▼
-Telegram Firewall Gemini
-Bot (iptables) AI
-
----
-
-## 🛠️ Công nghệ sử dụng
+## Công nghệ
 
 | Thành phần | Công nghệ |
-|------------|-----------|
-| **Frontend** | Next.js 15.1, TailwindCSS, Chart.js, Leaflet |
-| **Backend** | Node.js 24, Express.js 5, Prisma ORM, JWT |
-| **Database** | PostgreSQL 18 |
-| **Workflow** | n8n 2.41 |
-| **AI** | Google Gemini 3.8 Flash (Vision + LLM) |
-| **DevOps** | Docker, Docker Compose, Nginx |
+| :--- | :--- |
+| Frontend | Next.js, TypeScript |
+| Backend | Node.js, Express, PostgreSQL (`pg`), JWT, bcrypt, helmet |
+| Workflow | n8n 2.41.5 (chạy trực tiếp trên máy chủ) |
+| AI | Google Gemini (qua API) |
+| Cảnh báo | Telegram Bot |
 
----
+## Cài đặt
 
-## 🚀 Cài đặt nhanh
-
-### Yêu cầu
-- Node.js ≥ 24 · PostgreSQL ≥ 18 · Docker ≥ 27 · Git
-
-### Các bước
-
-```bash
-# 1. Clone
+~~~bash
 git clone https://github.com/Chamm286/riceguard.git
 cd riceguard
 
-# 2. Backend
-cd backend
-npm install
-cp .env.example .env
-npx prisma migrate dev
-npm run dev              # → http://localhost:3001
+# Backend (cổng 5000)
+cd backend && npm install
+cp .env.example .env      # điền thông tin DB, JWT_SECRET, N8N_WEBHOOK_URL
+npm run dev
 
-# 3. Frontend
-cd ../frontend
-npm install
-cp .env.example .env.local
-npm run dev              # → http://localhost:3000
+# Frontend (cổng 3000)
+cd ../frontend && npm install
+npm run dev
 
-# 4. n8n
-docker run -d --name riceguard-n8n \
-  -p 5678:5678 \
-  -v n8n_data:/home/node/.n8n \
-  n8nio/n8n:2.41.5       # → http://localhost:5678
-🐳 Chạy toàn bộ bằng Docker Compose
-docker-compose up -d
-Service	URL
-Frontend	http://localhost:3000
-Backend API	http://localhost:3001
-n8n	http://localhost:5678
-PostgreSQL	localhost:5432
-⚙️ Cấu hình môi trường
-Backend — .env
-NODE_ENV=development
-PORT=3001
-DATABASE_URL="postgresql://riceguard:password@localhost:5432/riceguard"
-JWT_SECRET=your_super_secret_key
-GEMINI_API_KEY=AIzaSy...
-N8N_WEBHOOK_URL=http://localhost:5678/webhook
-TELEGRAM_BOT_TOKEN=123456:ABC-DEF...
-SMTP_HOST=smtp.gmail.com
-SMTP_USER=your_email@gmail.com
-SMTP_PASS=your_app_password
-Frontend — .env.local
-NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
-NEXT_PUBLIC_N8N_URL=http://localhost:5678
-📂 Cấu trúc thư mục
-riceguard/
-├── backend/              # Node.js API + Prisma
-├── frontend/             # Next.js App Router
-├── n8n-workflows/
-│   ├── agri/             # D1, D3, D4
-│   └── security/         # A1 → A8
-├── docs/                 # Tài liệu kiến trúc, API
-├── docker-compose.yml
-├── LICENSE
-└── README.md
-👥 Đội ngũ phát triển
-Họ và tên	Vai trò	Trách nhiệm
-Nguyễn Thị Bích Trâm	🎯 Leader — Backend	Điều phối dự án, thiết kế API, nghiệp vụ cốt lõi
-Tống Mỹ Trà	🎨 Frontend	UI/UX, dashboard, tích hợp API
-Trần Anh Tuấn	⚙️ Backend	Service, tích hợp AI, xử lý dữ liệu
-Nguyễn Hữu Thuận	🚀 DevOps / n8n	Workflow, CI/CD, hạ tầng
-🤝 Đóng góp
+# n8n (chạy trên máy chủ)
+npm install -g n8n@2.41.5
+n8n start                 # http://localhost:5678
+~~~
 
-    Fork repo
+Sau khi chạy n8n, import `n8n-workflows/RiceGuard-Security-Pipeline.json`, gắn credential Postgres và Telegram, rồi **Publish**.
 
-    Tạo nhánh: git checkout -b feature/AmazingFeature
+## Kiểm thử
 
-    Commit: git commit -m 'feat: add AmazingFeature'
+~~~bash
+curl -X POST http://localhost:5678/webhook/security-event \
+  -H "Content-Type: application/json" \
+  -d '{"ip":"203.0.113.50","path":"/api/login","payload":"1 OR 1=1"}'
+~~~
 
-    Push: git push origin feature/AmazingFeature
+Dùng IP `203.0.113.x` (dải dành cho tài liệu) để thử, tránh chặn nhầm máy thật.
 
-    Mở Pull Request
+## Bảo mật
 
-Quy ước commit (Conventional Commits)
+- Không commit `.env`, `credentials/`, các thư mục `backup-*`, file `*.sql` và workflow có chứa key.
+- API key lưu trong n8n Credentials, không đặt trong URL.
+- Các cổng dịch vụ chỉ bind `127.0.0.1`.
 
-feat: · fix: · docs: · style: · refactor: · test: · chore:
-📄 Giấy phép
+## Nhóm phát triển
 
-Dự án phát hành dưới giấy phép MIT License — xem file LICENSE.
+| Họ và tên | Vai trò |
+| :--- | :--- |
+| Nguyễn Thị Bích Trâm | Leader, Backend |
+| Tống Mỹ Trà | Frontend |
+| Trần Anh Tuấn | Backend |
+| Nguyễn Hữu Thuận | DevOps, n8n |
 
-🌟 RiceGuard — Bảo vệ mùa màng & Bảo vệ hệ thống 🌟
+## Giấy phép
 
-Made with ❤️ by RiceGuard Team
+MIT License.

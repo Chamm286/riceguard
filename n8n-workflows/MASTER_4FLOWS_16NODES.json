@@ -217,8 +217,8 @@
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "UPDATE alerts SET status='processing', updated_at=NOW() WHERE ip_address=$1 AND status='new'",
-          "queryReplacement": "={{ [$('🧠 Detect Attack').first().json.ip] }}"
+          "query": "UPDATE alerts SET status = 'blocked', updated_at = NOW() WHERE id = {{ $('🗄️ Save Alert').item.json.id }};",
+          "options": {}
         },
         "id": "n9",
         "name": "🗄️ Update Alert",

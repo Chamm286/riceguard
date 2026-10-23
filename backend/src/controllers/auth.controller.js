@@ -16,25 +16,32 @@ const logLoginFailed = async (username, ip) => {
     );
     console.log(`⚠️ Logged login failed: ${username} from ${ip}`);
 
-    // 2. GỌI WEBHOOK A1
+    // 2. GỌI LUỒNG GỘP security-event
     try {
-      const n8nRes = await fetch('http://localhost:5678/webhook/detect-ssh', {
+      const countRes = await pool.query(
+        `SELECT COUNT(*)::int AS c FROM logs WHERE ip_address = $1 AND event_type = 'login_failed' AND created_at > NOW() - INTERVAL '1 hour'`,
+        [ip || 'unknown']
+      );
+      const failedCount = (countRes.rows[0]?.c || 0) + 1;
+
+      const n8nRes = await fetch('http://localhost:5678/webhook/security-event', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           source: 'auth',
-          event_type: 'login_failed',
-          severity: 'warn',
-          category: 'brute_force',
-          ip_address: ip,
-          message: message,
-          ip: ip,
+          event: 'ssh_failed',
+          failed_count: failedCount,
+          ip: ip || 'unknown',
+          path: '/login',
+          payload: message,
           user: username,
+          category: 'brute_force',
+          message,
         }),
       });
-      console.log(`✅ A1 webhook: ${n8nRes.status}`);
+      console.log(`✅ security-event webhook: ${n8nRes.status}`);
     } catch (e) {
-      console.log(`⚠️ A1 webhook failed: ${e.message}`);
+      console.log(`⚠️ security-event webhook failed: ${e.message}`);
     }
   } catch (err) {
     console.error('❌ Log login failed error:', err.message);

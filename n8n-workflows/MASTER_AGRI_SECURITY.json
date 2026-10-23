@@ -1,0 +1,368 @@
+{
+  "name": "🟢 MASTER SMART AGRI & SECURITY GUARD",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agri-report",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ],
+      "id": "agri-1",
+      "name": "1. Webhook - Agri Report"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json.body || $input.first().json;\nreturn [{ json: { report_id: item.id, user_id: item.user_id, title: item.title, description: item.description, image_url: item.image_url } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        300,
+        300
+      ],
+      "id": "agri-2",
+      "name": "2. Extract & Sanitize Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.image_url }}",
+              "rightValue": ".php",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        500,
+        300
+      ],
+      "id": "agri-3",
+      "name": "3. File Security Check"
+    },
+    {
+      "parameters": {
+        "url": "=http://localhost:5000{{ $('2. Extract & Sanitize Data').item.json.image_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        700,
+        180
+      ],
+      "id": "agri-4",
+      "name": "4. Download Rice Image"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=YOUR_GEMINI_API_KEY",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"contents\":[{\"parts\":[{\"text\":\"Phân tích ảnh lá lúa và trả về JSON định dạng: {\\\"tinh_trang\\\": \\\"...\\\", \\\"muc_do\\\": \\\"cao|trung_binh|thap\\\", \\\"ten_benh\\\": \\\"...\\\", \\\"khuyen_nghi\\\": \\\"...\\\"}\"}]}]}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        900,
+        180
+      ],
+      "id": "agri-5",
+      "name": "5. Gemini Vision AI Analysis"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $('5. Gemini Vision AI Analysis').item.json.candidates[0].content.parts[0].text;\nlet parsed = {};\ntry { parsed = JSON.parse(text.replace(/```json|```/g, '').trim()); } catch(e) { parsed = { muc_do: 'trung_binh', ten_benh: 'Bệnh lá lúa', khuyen_nghi: 'Kiểm tra thực tế' }; }\nreturn [{ json: { ...$('2. Extract & Sanitize Data').item.json, ...parsed } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        180
+      ],
+      "id": "agri-6",
+      "name": "6. Parse AI JSON Diagnosis"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE reports SET ai_severity = '{{ $json.muc_do }}', ai_disease = '{{ $json.ten_benh }}', status = 'reviewing' WHERE id = {{ $json.report_id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1300,
+        180
+      ],
+      "id": "agri-7",
+      "name": "7. Postgres Sync Report"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT telegram_chat_id, full_name FROM users WHERE id = {{ $('2. Extract & Sanitize Data').item.json.user_id }};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1500,
+        180
+      ],
+      "id": "agri-8",
+      "name": "8. Query Farmer Info"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $('6. Parse AI JSON Diagnosis').item.json.muc_do }}",
+              "rightValue": "cao",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1700,
+        180
+      ],
+      "id": "agri-9",
+      "name": "9. Severity Critical?"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('8. Query Farmer Info').item.json.telegram_chat_id || 'YOUR_TELEGRAM_CHAT_ID' }}",
+        "text": "=🌾 *CẢNH BÁO BỆNH LÚA NẶNG*\\n\\nXin chào *{{ $('8. Query Farmer Info').item.json.full_name }}*,\\n🦠 Bệnh: *{{ $('6. Parse AI JSON Diagnosis').item.json.ten_benh }}*\\n⚠️ Mức độ: *CAO*\\n💡 Khuyến nghị: {{ $('6. Parse AI JSON Diagnosis').item.json.khuyen_nghi }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1900,
+        100
+      ],
+      "id": "agri-10",
+      "name": "10. Send Telegram to Farmer"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5000/api/socket-emit",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\"event\": \"report_updated\", \"data\": {\"id\": {{ $json.report_id }}, \"status\": \"reviewing\"}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        2100,
+        180
+      ],
+      "id": "agri-11",
+      "name": "11. Push Socket Realtime UI"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"status\": \"success\", \"message\": \"Agri report processed successfully\"}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2300,
+        180
+      ],
+      "id": "agri-12",
+      "name": "12. Respond to Webhook"
+    }
+  ],
+  "connections": {
+    "1. Webhook - Agri Report": {
+      "main": [
+        [
+          {
+            "node": "2. Extract & Sanitize Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Extract & Sanitize Data": {
+      "main": [
+        [
+          {
+            "node": "3. File Security Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. File Security Check": {
+      "main": [
+        [
+          {
+            "node": "4. Download Rice Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. Download Rice Image": {
+      "main": [
+        [
+          {
+            "node": "5. Gemini Vision AI Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5. Gemini Vision AI Analysis": {
+      "main": [
+        [
+          {
+            "node": "6. Parse AI JSON Diagnosis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6. Parse AI JSON Diagnosis": {
+      "main": [
+        [
+          {
+            "node": "7. Postgres Sync Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7. Postgres Sync Report": {
+      "main": [
+        [
+          {
+            "node": "8. Query Farmer Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8. Query Farmer Info": {
+      "main": [
+        [
+          {
+            "node": "9. Severity Critical?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "9. Severity Critical?": {
+      "main": [
+        [
+          {
+            "node": "10. Send Telegram to Farmer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "11. Push Socket Realtime UI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10. Send Telegram to Farmer": {
+      "main": [
+        [
+          {
+            "node": "11. Push Socket Realtime UI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11. Push Socket Realtime UI": {
+      "main": [
+        [
+          {
+            "node": "12. Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

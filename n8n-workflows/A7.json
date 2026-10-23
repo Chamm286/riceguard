@@ -1,0 +1,84 @@
+{
+  "name": "A7 | Auto Block IP",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "auto-block",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "webhook-a7",
+      "name": "Webhook - Auto Block",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-600, 400],
+      "webhookId": "auto-block"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COUNT(*)::int AS count FROM alerts WHERE ip_address = $1 AND created_at > NOW() - INTERVAL '1 hour'",
+        "options": { "queryReplacement": "={{ $json.body.ip }}" }
+      },
+      "id": "count-a7",
+      "name": "Đếm alert 1h",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [-380, 400],
+      "credentials": { "postgres": { "id": "REPLACE", "name": "Postgres account" } }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [{
+            "id": "c1",
+            "leftValue": "={{ $json.count }}",
+            "rightValue": 5,
+            "operator": { "type": "number", "operation": "gte" }
+          }]
+        }
+      },
+      "id": "if-a7",
+      "name": "IF ≥5 lần",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [-160, 400]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO threats (ip_address, threat_type, severity, status, notes, last_seen) VALUES ($1, 'auto_blocked', 'critical', 'blocked', 'Tự động block sau 5 alert/1h', NOW()) ON CONFLICT (ip_address) DO UPDATE SET status = 'blocked', last_seen = NOW() RETURNING *",
+        "options": { "queryReplacement": "={{ $('Webhook - Auto Block').first().json.body.ip }}" }
+      },
+      "id": "block-a7",
+      "name": "Block IP",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [60, 300],
+      "credentials": { "postgres": { "id": "REPLACE", "name": "Postgres account" } }
+    },
+    {
+      "parameters": {
+        "chatId": "7893336271",
+        "text": "=🚫 AUTO BLOCK IP\n\n🌐 IP: {{ $json.ip_address }}\n⚠️ Lý do: ≥5 alert trong 1 giờ\n🕐 {{ new Date().toLocaleString('vi-VN') }}",
+        "additionalFields": {}
+      },
+      "id": "tg-a7",
+      "name": "Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [280, 300],
+      "credentials": { "telegramApi": { "id": "REPLACE", "name": "Telegram account" } }
+    }
+  ],
+  "connections": {
+    "Webhook - Auto Block": { "main": [[{ "node": "Đếm alert 1h", "type": "main", "index": 0 }]] },
+    "Đếm alert 1h": { "main": [[{ "node": "IF ≥5 lần", "type": "main", "index": 0 }]] },
+    "IF ≥5 lần": { "main": [[{ "node": "Block IP", "type": "main", "index": 0 }], []] },
+    "Block IP": { "main": [[{ "node": "Telegram", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false,
+  "tags": []
+}

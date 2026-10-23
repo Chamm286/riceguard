@@ -1,0 +1,72 @@
+{
+  "name": "D2 | Cảnh báo farmer",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "notify-farmer",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "webhook-d2",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "notify-farmer"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT r.id, r.ai_severity, r.ai_disease, r.ai_analysis, r.field_id, u.full_name, u.telegram_chat_id, f.name AS field_name FROM reports r JOIN users u ON u.id = r.user_id LEFT JOIN fields f ON f.id = r.field_id WHERE r.id = {{ $json.body.report_id }}",
+        "options": {}
+      },
+      "id": "pg-d2",
+      "name": "Query report",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [200, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"caseSensitive": false, "typeValidation": "loose", "version": 1},
+          "conditions": [{
+            "id": "c1",
+            "leftValue": "={{ $json.ai_severity }}",
+            "rightValue": "cao",
+            "operator": {"type": "string", "operation": "contains"}
+          }],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-d2",
+      "name": "Severity Cao?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [400, 0]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.telegram_chat_id }}",
+        "text": "=🚨 CẢNH BÁO BỆNH NẶNG\\n\\nXin chào {{ $json.full_name }},\\n\\n🌾 Vùng: {{ $json.field_name }}\\n🦠 Bệnh: {{ $json.ai_disease }}\\n⚠️ Mức độ: CAO\\n\\n📝 {{ $json.ai_analysis }}\\n\\n💡 Cần xử lý ngay!",
+        "additionalFields": {}
+      },
+      "id": "tg-d2",
+      "name": "Telegram Farmer",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [600, -100]
+    }
+  ],
+  "connections": {
+    "Webhook": {"main": [[{"node": "Query report", "type": "main", "index": 0}]]},
+    "Query report": {"main": [[{"node": "Severity Cao?", "type": "main", "index": 0}]]},
+    "Severity Cao?": {"main": [[{"node": "Telegram Farmer", "type": "main", "index": 0}], []]}
+  },
+  "active": false,
+  "settings": {"executionOrder": "v1"},
+  "versionId": "d2-simple-1",
+  "tags": []
+}

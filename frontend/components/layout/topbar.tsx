@@ -7,7 +7,7 @@ const titles: Record<string, { title: string; desc: string }> = {
   "/alerts": { title: "Quản lý cảnh báo", desc: "Phân loại và xử lý sự cố" },
   "/investigations": { title: "Điều tra sự cố", desc: "Theo dõi và phân tích chuyên sâu" },
   "/threats": { title: "Mối đe dọa", desc: "Threat intelligence & feeds" },
-  "/automation": { title: "Tự động hóa n8n", desc: "20 luồng workflows đang hoạt động" },
+  "/automation": { title: "Tự động hóa n8n", desc: "4 luồng workflows đang hoạt động" },
   "/logs": { title: "Nhật ký hệ thống", desc: "Lịch sử truy cập và sự kiện" },
   "/fields": { title: "Vùng canh tác", desc: "Giám sát khu vực trồng lúa" },
   "/assets": { title: "Quản lý tài sản", desc: "Server, sensor, IoT devices" },

@@ -93,6 +93,16 @@ async function processLog(log) {
       ]
     );
 
+    // Emit realtime log cho FE
+    if (global.io) {
+      global.io.to('alerts').emit('new_log', {
+        message: analysis.message,
+        severity: analysis.severity,
+        ip_address: analysis.ip_address,
+        created_at: new Date().toISOString(),
+      });
+    }
+
     // Nếu là alert nguy hiểm
     if (analysis.severity === "critical" || analysis.severity === "high") {
       const recent = await pool.query(
@@ -108,8 +118,8 @@ async function processLog(log) {
            VALUES ($1, $2, $3, $4, $5, $6, 'new', NOW())
            RETURNING id, title, severity, description, created_at`,
           [
-            "security",
             analysis.category,
+            'security',
             analysis.severity,
             analysis.title,
             analysis.message,
@@ -120,9 +130,8 @@ async function processLog(log) {
         const alert = inserted.rows[0];
         console.log(`🚨 ALERT #${alert.id}: ${analysis.title}`);
 
-        // Gửi n8n webhook
-        const webhookPath = getWebhookPath(analysis.category);
-        const url = `${N8N_BASE}/${webhookPath}`;
+        // Gửi n8n webhook (luồng gộp security-event)
+        const url = `${N8N_BASE}/security-event`;
 
         try {
           const controller = new AbortController();
@@ -132,12 +141,18 @@ async function processLog(log) {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              id: alert.id,
+              ip: analysis.ip_address || "unknown",
+              path: log.originalUrl || log.path || log.request_uri || "",
+              query: log.query || "",
+              payload: analysis.message || "",
+              user_agent: log.http_user_agent || log.user_agent || "",
+              event: analysis.category === "brute_force" ? "ssh_failed" : (analysis.category === "port_scan" ? "port_scan" : undefined),
+              failed_count: analysis.category === "brute_force" ? 5 : undefined,
+              ports_count: analysis.category === "port_scan" ? 10 : undefined,
+              alert_id: alert.id,
+              category: analysis.category,
               title: alert.title,
               severity: alert.severity,
-              category: analysis.category,
-              ip_address: analysis.ip_address || "unknown",
-              status: "new",
               message: alert.description,
               created_at: alert.created_at,
             }),

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Activity, CheckCircle, Clock, History, Info, Loader2, Pause,
-  Power, Radio, RefreshCw, Users, Workflow, X, XCircle, Zap,
+  Play, Power, Radio, RefreshCw, Users, Workflow, X, XCircle, Zap,
 } from 'lucide-react';
 import { useApiData } from '@/hooks/use-api-data';
 import api, { getApiErrorMessage } from '@/lib/api';
@@ -95,6 +95,20 @@ export default function AutomationPage() {
   const refresh = () => {
     workflowsQuery.refetch();
     statsQuery.refetch();
+  };
+
+  const handleRun = async (workflow: WorkflowItem) => {
+    setActionId(workflow.id);
+    setNotice(null);
+    try {
+      const res = await api.post(`/workflows/${workflow.id}/run`);
+      setNotice({ type: 'ok', text: res.data?.message || 'Đã gửi yêu cầu chạy workflow' });
+      setTimeout(refresh, 3000);
+    } catch (err) {
+      setNotice({ type: 'error', text: getApiErrorMessage(err) });
+    } finally {
+      setActionId(null);
+    }
   };
 
   const handleToggle = async (workflow: WorkflowItem) => {
@@ -253,6 +267,14 @@ export default function AutomationPage() {
                   {workflow.failed_runs > 0 && <span className="mr-1 rounded-full bg-danger/10 px-2 py-0.5 text-[10px] text-danger">{workflow.failed_runs} lỗi</span>}
                   <button onClick={() => openLogs(workflow)} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-primary/10 hover:text-primary" title="Lịch sử chạy">
                     <History className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => handleRun(workflow)}
+                    disabled={actionId === workflow.id || workflow.slug === 'soc-alert-triage'}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                    title={workflow.slug === 'soc-alert-triage' ? 'SOC tự chạy khi có sự kiện bảo mật' : 'Chạy thử workflow'}
+                  >
+                    {actionId === workflow.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
                   </button>
                   <button
                     onClick={() => handleToggle(workflow)}

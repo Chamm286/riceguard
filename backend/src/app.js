@@ -54,6 +54,8 @@ app.use('/api/audit', require('./routes/audit.routes'));
 app.use('/api/satellite', require('./routes/satellite.routes'));
 app.use('/api/firewall', require('./routes/firewall.routes'));
 app.use('/api/system', require('./routes/system.routes'));
+app.use('/api/weather', require('./routes/weather.routes'));
+app.use('/api/disease-library', require('./routes/disease.routes'));
 app.use('/api/plots', require('./routes/plots.routes'));
 app.use('/api/seasons', require('./routes/seasons.routes'));
 

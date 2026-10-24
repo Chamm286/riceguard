@@ -15,6 +15,8 @@ router.get('/count', verifyToken, async (req, res) => {
   }
 });
 
+router.get('/mine', verifyToken, alertController.getMine);
+
 // Các route khác chỉ admin/analyst
 router.post('/', verifyToken, requireRole('admin', 'analyst'), alertController.create);
 router.get('/', verifyToken, requireRole('admin', 'analyst'), alertController.getAll);

@@ -1,16 +1,14 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  MapPin, Plus, Leaf, Layers, TrendingUp, X, ChevronRight,
-  Satellite, Calendar, Award, Sprout, Search, Filter
+  MapPin, Leaf, Layers, TrendingUp, X,
+  Satellite, Calendar, Award, Sprout, Search, type LucideIcon
 } from "lucide-react";
-import axios from "axios";
-import { toast } from "sonner";
+import { useApiData } from "@/hooks/use-api-data";
+import { DataState } from "@/components/common/data-state";
 import FieldMap from "@/components/farmer/FieldMap";
 import SatelliteAnalysis from "@/components/farmer/SatelliteAnalysis";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 interface Field {
   id: number;
@@ -48,32 +46,24 @@ const statusConfig: Record<string, { label: string; text: string; bg: string; do
 };
 
 export default function FarmerFieldsPage() {
-  const [fields, setFields] = useState<Field[]>([]);
-  const [plots, setPlots] = useState<Plot[]>([]);
-  const [seasons, setSeasons] = useState<Season[]>([]);
-  const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"map" | "grid">("grid");
   const [selectedField, setSelectedField] = useState<Field | null>(null);
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const headers = { Authorization: `Bearer ${token}` };
-        const [f, p, s] = await Promise.all([
-          axios.get(`${API_URL}/api/fields`, { headers }).catch(() => ({ data: { data: [] } })),
-          axios.get(`${API_URL}/api/plots`, { headers }).catch(() => ({ data: { data: [] } })),
-          axios.get(`${API_URL}/api/seasons`, { headers }).catch(() => ({ data: { data: [] } })),
-        ]);
-        setFields(f.data.data || []);
-        setPlots(p.data.data || []);
-        setSeasons(s.data.data || []);
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
-    };
-    fetchData();
-  }, []);
+  const fieldsQuery = useApiData<Field[]>("/fields", { pollMs: 30000 });
+  const plotsQuery = useApiData<Plot[]>("/plots", { pollMs: 30000 });
+  const seasonsQuery = useApiData<Season[]>("/seasons", { pollMs: 30000 });
+  const fields = useMemo(() => fieldsQuery.data || [], [fieldsQuery.data]);
+  const plots = useMemo(() => plotsQuery.data || [], [plotsQuery.data]);
+  const seasons = useMemo(() => seasonsQuery.data || [], [seasonsQuery.data]);
+
+  const loading = fieldsQuery.loading || plotsQuery.loading || seasonsQuery.loading;
+  const error = fieldsQuery.error || plotsQuery.error || seasonsQuery.error;
+  const refetchAll = () => {
+    fieldsQuery.refetch();
+    plotsQuery.refetch();
+    seasonsQuery.refetch();
+  };
 
   const filteredFields = fields.filter((f) =>
     f.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -134,12 +124,6 @@ export default function FarmerFieldsPage() {
             </button>
           </div>
 
-          <button
-            onClick={() => toast.info("Chức năng đang phát triển")}
-            className="flex items-center gap-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 text-sm font-semibold transition shadow-lg shadow-emerald-500/20"
-          >
-            <Plus className="h-4 w-4" /> Thêm vùng
-          </button>
         </div>
       </div>
 
@@ -152,9 +136,29 @@ export default function FarmerFieldsPage() {
       </div>
 
       {/* Content */}
-      {viewMode === "map" ? (
-        <div className="space-y-4">
-          <FieldMap fields={filteredFields} />
+      <DataState
+        loading={loading}
+        error={error}
+        empty={!loading && !error && filteredFields.length === 0}
+        emptyText="Không tìm thấy vùng nào"
+        onRetry={refetchAll}
+      >
+        {viewMode === "map" ? (
+          <div className="space-y-4">
+            <FieldMap fields={filteredFields} />
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filteredFields.map((field) => (
+                <FieldCard
+                  key={field.id}
+                  field={field}
+                  plots={plots.filter((p) => p.field_id === field.id)}
+                  seasons={seasons.filter((s) => s.field_id === field.id)}
+                  onClick={() => setSelectedField(field)}
+                />
+              ))}
+            </div>
+          </div>
+        ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredFields.map((field) => (
               <FieldCard
@@ -166,30 +170,8 @@ export default function FarmerFieldsPage() {
               />
             ))}
           </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredFields.map((field) => (
-            <FieldCard
-              key={field.id}
-              field={field}
-              plots={plots.filter((p) => p.field_id === field.id)}
-              seasons={seasons.filter((s) => s.field_id === field.id)}
-              onClick={() => setSelectedField(field)}
-            />
-          ))}
-        </div>
-      )}
-
-      {filteredFields.length === 0 && !loading && (
-        <div className="rounded-2xl border border-dashed border-border bg-card/50 p-16 text-center">
-          <div className="h-16 w-16 rounded-2xl bg-muted/30 flex items-center justify-center mx-auto mb-4">
-            <MapPin className="h-7 w-7 text-muted-foreground" />
-          </div>
-          <p className="font-semibold">Không tìm thấy vùng nào</p>
-          <p className="text-sm text-muted-foreground mt-1">Thử tìm từ khóa khác</p>
-        </div>
-      )}
+        )}
+      </DataState>
 
       {/* Modal */}
       <AnimatePresence>
@@ -208,7 +190,7 @@ export default function FarmerFieldsPage() {
 
 /* ============ COMPONENTS ============ */
 
-function StatCard({ icon: Icon, label, value, unit, sub, highlight }: any) {
+function StatCard({ icon: Icon, label, value, unit, sub, highlight }: { icon: LucideIcon; label: string; value: string | number; unit?: string; sub?: string; highlight?: boolean }) {
   return (
     <div className={`rounded-2xl border p-4 transition ${
       highlight
@@ -228,7 +210,7 @@ function StatCard({ icon: Icon, label, value, unit, sub, highlight }: any) {
   );
 }
 
-function FieldCard({ field, plots, seasons, onClick }: any) {
+function FieldCard({ field, plots, seasons, onClick }: { field: Field; plots: Plot[]; seasons: Season[]; onClick: () => void }) {
   const cfg = statusConfig[field.status] || statusConfig.dang_canh_tac;
   const latest = seasons[0];
 
@@ -299,10 +281,10 @@ function FieldCard({ field, plots, seasons, onClick }: any) {
   );
 }
 
-function FieldModal({ field, plots, seasons, onClose }: any) {
+function FieldModal({ field, plots, seasons, onClose }: { field: Field; plots: Plot[]; seasons: Season[]; onClose: () => void }) {
   const cfg = statusConfig[field.status] || statusConfig.dang_canh_tac;
-  const totalProfit = seasons.reduce((s: number, x: any) => s + Number(x.profit_vnd), 0);
-  const totalYield = seasons.reduce((s: number, x: any) => s + Number(x.yield_kg), 0);
+  const totalProfit = seasons.reduce((s, x) => s + Number(x.profit_vnd), 0);
+  const totalYield = seasons.reduce((s, x) => s + Number(x.yield_kg), 0);
 
   return (
     <motion.div
@@ -372,7 +354,7 @@ function FieldModal({ field, plots, seasons, onClose }: any) {
               </div>
             ) : (
               <div className="space-y-2">
-                {plots.map((plot: any) => (
+                {plots.map((plot) => (
                   <div key={plot.id} className="flex items-center justify-between p-3 rounded-xl bg-accent/20 hover:bg-accent/30 transition border border-border/30">
                     <div className="flex items-center gap-3">
                       <div className="h-9 w-9 rounded-lg bg-emerald-500/10 flex items-center justify-center">
@@ -409,7 +391,7 @@ function FieldModal({ field, plots, seasons, onClose }: any) {
                 <span className="text-xs text-muted-foreground">{seasons.length} vụ</span>
               </div>
               <div className="space-y-2">
-                {seasons.map((season: any) => (
+                {seasons.map((season) => (
                   <div key={season.id} className="flex items-center justify-between p-3 rounded-xl bg-accent/20 border border-border/30">
                     <div className="flex items-center gap-3">
                       <div className="h-9 w-9 rounded-lg bg-amber-500/10 flex items-center justify-center">
@@ -448,7 +430,7 @@ function FieldModal({ field, plots, seasons, onClose }: any) {
   );
 }
 
-function MiniStat({ label, value, unit, highlight }: any) {
+function MiniStat({ label, value, unit, highlight }: { label: string; value: string | number; unit?: string; highlight?: boolean }) {
   return (
     <div className={`rounded-xl border p-3 ${
       highlight ? "border-emerald-500/30 bg-emerald-500/5" : "border-border/50 bg-accent/20"

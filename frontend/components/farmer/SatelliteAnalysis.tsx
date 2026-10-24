@@ -1,9 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Satellite, Loader2, CheckCircle2, AlertTriangle, Sparkles } from "lucide-react";
-import axios from "axios";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+import api, { getApiErrorMessage } from "@/lib/api";
 
 interface SatelliteResult {
   dien_tich: string;
@@ -31,19 +29,18 @@ export default function SatelliteAnalysis({ fieldName, lat, lng }: Props) {
     setError("");
     setResult(null);
     try {
-      const token = localStorage.getItem("token");
-      const res = await axios.post(
-        `${API_URL}/api/satellite/analyze`,
+      const res = await api.post(
+        "/satellite/analyze",
         { lat, lng, zoom: 16, field_name: fieldName },
-        { headers: { Authorization: `Bearer ${token}` }, timeout: 90000 }
+        { timeout: 90000 }
       );
       if (res.data.success) {
         setResult(res.data.data);
       } else {
         setError(res.data.message || "Lỗi phân tích");
       }
-    } catch (e: any) {
-      setError(e.response?.data?.message || e.message || "Lỗi kết nối");
+    } catch (e) {
+      setError(getApiErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -134,7 +131,7 @@ export default function SatelliteAnalysis({ fieldName, lat, lng }: Props) {
       {!loading && !result && !error && (
         <div className="rounded-xl bg-accent/20 border border-dashed border-border/50 p-3 text-center">
           <p className="text-[11px] text-muted-foreground">
-            Click <strong className="text-primary">"Phân tích ngay"</strong> để AI phân tích ảnh vệ tinh vùng này
+            Click <strong className="text-primary">&quot;Phân tích ngay&quot;</strong> để AI phân tích ảnh vệ tinh vùng này
           </p>
         </div>
       )}

@@ -63,6 +63,23 @@ exports.getAll = async (req, res) => {
 
 exports.getAlerts = exports.getAll;
 
+exports.getMine = async (req, res) => {
+  try {
+    const result = await pool.query(
+      `${ALERT_SELECT}
+       WHERE a.alert_type IN ('disease', 'agriculture')
+         AND (f.owner_id = $1 OR a.field_id IS NULL)
+       ORDER BY a.created_at DESC
+       LIMIT 100`,
+      [req.user.id]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
 exports.getById = async (req, res) => {
   try {
     const alert = await getAlertWithRelations(req.params.id);

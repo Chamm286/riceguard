@@ -1,159 +1,145 @@
-"use client";
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { FileText, Leaf, AlertTriangle, CheckCircle2, Clock, Loader2 } from "lucide-react";
-import axios from "axios";
-import Link from "next/link";
+'use client';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+import { useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { AlertTriangle, CheckCircle2, Clock, FileText, Leaf, Loader2, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { useApiData } from '@/hooks/use-api-data';
+import { baseURL } from '@/lib/api';
+import { DataState } from '@/components/common/data-state';
+import { PageHeader } from '@/components/common/page-header';
+import { StatCard } from '@/components/common/stat-card';
+import { formatDateTime, formatNumber } from '@/lib/format';
 
 interface Report {
   id: number;
   title: string;
-  description: string;
-  image_url: string;
-  ai_analysis: string;
-  ai_severity: string;
-  ai_disease: string;
+  description: string | null;
+  image_url: string | null;
+  ai_severity: string | null;
+  ai_disease: string | null;
   status: string;
   created_at: string;
 }
 
+function severityKey(value: string | null) {
+  const normalized = (value || '').toLowerCase().replace(/[*\s]/g, '');
+  if (normalized.includes('cao')) return 'cao';
+  if (normalized.includes('trungbinh')) return 'trung bình';
+  if (normalized.includes('thap')) return 'thấp';
+  return '';
+}
+
+function imageUrl(path: string | null) {
+  if (!path) return null;
+  if (/^https?:\/\//.test(path)) return path;
+  return `${baseURL.replace(/\/api$/, '')}${path}`;
+}
+
 export default function MyReportsPage() {
-  const [reports, setReports] = useState<Report[]>([]);
-  const [loading, setLoading] = useState(true);
+  const reportsQuery = useApiData<Report[]>('/reports', { pollMs: 30000 });
+  const reports = useMemo(() => reportsQuery.data || [], [reportsQuery.data]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get(`${API_URL}/api/reports`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setReports(res.data.data || []);
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
-    };
-    fetchData();
-  }, []);
-
-  const stats = {
+  const stats = useMemo(() => ({
     total: reports.length,
-    pending: reports.filter(r => r.status === "pending").length,
-    reviewing: reports.filter(r => r.status === "reviewing").length,
-    severe: reports.filter(r => r.ai_severity === "cao").length,
-  };
+    pending: reports.filter((report) => report.status === 'pending').length,
+    reviewing: reports.filter((report) => report.status === 'reviewing').length,
+    severe: reports.filter((report) => severityKey(report.ai_severity) === 'cao').length,
+  }), [reports]);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Báo cáo của tôi</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Lịch sử báo cáo sức khỏe lúa đã gửi
-        </p>
+      <PageHeader
+        title="Báo cáo của tôi"
+        description="Lịch sử báo cáo sức khỏe lúa đã gửi"
+        action={
+          <button onClick={reportsQuery.refetch} className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium transition hover:border-primary/50">
+            <RefreshCw className={`h-4 w-4 ${reportsQuery.refreshing ? 'animate-spin' : ''}`} /> Làm mới
+          </button>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <StatCard label="Tổng báo cáo" value={formatNumber(stats.total)} icon={FileText} />
+        <StatCard label="Đang chờ AI" value={formatNumber(stats.pending)} icon={Clock} color="gradient-warning" delay={0.05} />
+        <StatCard label="Đang xử lý" value={formatNumber(stats.reviewing)} icon={Loader2} color="gradient-cyber" delay={0.1} />
+        <StatCard label="Bệnh nặng" value={formatNumber(stats.severe)} icon={AlertTriangle} color="gradient-danger" delay={0.15} />
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard icon={FileText} label="Tổng báo cáo" value={stats.total} color="primary" />
-        <StatCard icon={Clock} label="Đang chờ AI" value={stats.pending} color="warning" />
-        <StatCard icon={Loader2} label="Đang xử lý" value={stats.reviewing} color="cyber" />
-        <StatCard icon={AlertTriangle} label="Bệnh nặng" value={stats.severe} color="danger" />
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <DataState
+        loading={reportsQuery.loading}
+        error={reportsQuery.error}
+        empty={!reportsQuery.loading && !reportsQuery.error && reports.length === 0}
+        emptyText="Chưa có báo cáo nào"
+        onRetry={reportsQuery.refetch}
+      >
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          {reports.map((report, index) => {
+            const image = imageUrl(report.image_url);
+            return (
+              <motion.div
+                key={report.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: Math.min(index * 0.05, 0.3) }}
+                className="group overflow-hidden rounded-2xl border border-border bg-card transition hover:border-primary/50"
+              >
+                <div className="relative aspect-video overflow-hidden bg-accent">
+                  {image ? (
+                    <img src={image} alt={report.title} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-muted-foreground"><Leaf className="h-8 w-8" /></div>
+                  )}
+                  <div className="absolute left-2 top-2"><StatusBadge status={report.status} /></div>
+                  {severityKey(report.ai_severity) && (
+                    <div className="absolute right-2 top-2"><SeverityBadge level={severityKey(report.ai_severity)} /></div>
+                  )}
+                </div>
+                <div className="space-y-2 p-4">
+                  <h3 className="line-clamp-1 text-sm font-semibold">{report.title}</h3>
+                  <p className="line-clamp-2 text-xs text-muted-foreground">{report.description || 'Không có mô tả'}</p>
+                  {report.ai_disease && (
+                    <p className="text-xs"><span className="text-muted-foreground">Bệnh:</span> <span className="font-semibold">{report.ai_disease}</span></p>
+                  )}
+                  <p className="border-t border-border pt-2 text-[10px] text-muted-foreground">{formatDateTime(report.created_at)}</p>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
-      ) : reports.length === 0 ? (
-        <div className="rounded-2xl border border-border bg-card p-16 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent mx-auto">
-            <Leaf className="h-7 w-7 text-muted-foreground" />
-          </div>
-          <p className="text-sm font-semibold mt-4">Chưa có báo cáo nào</p>
-          <p className="text-xs text-muted-foreground mt-1 mb-4">Bắt đầu gửi báo cáo đầu tiên</p>
-          <Link href="/farmer/upload"
-            className="inline-flex items-center gap-2 rounded-xl gradient-primary text-white px-5 py-2.5 text-sm font-semibold shadow-lg glow">
+      </DataState>
+
+      {!reportsQuery.loading && !reportsQuery.error && reports.length === 0 && (
+        <div className="text-center">
+          <Link href="/farmer/upload" className="inline-flex items-center gap-2 rounded-xl gradient-primary px-5 py-2.5 text-sm font-semibold text-white shadow-lg glow">
             <Leaf className="h-4 w-4" /> Tạo báo cáo mới
           </Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-          {reports.map((r, i) => (
-            <motion.div key={r.id}
-              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className="rounded-2xl border border-border bg-card overflow-hidden hover:border-primary/50 transition group">
-              <div className="relative aspect-video bg-accent overflow-hidden">
-                <img src={`${API_URL}${r.image_url}`} alt={r.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition duration-500" />
-                <div className="absolute top-2 left-2">
-                  <StatusBadge status={r.status} />
-                </div>
-                {r.ai_severity && (
-                  <div className="absolute top-2 right-2">
-                    <SeverityBadge level={r.ai_severity} />
-                  </div>
-                )}
-              </div>
-              <div className="p-4 space-y-2">
-                <h3 className="font-semibold text-sm line-clamp-1">{r.title}</h3>
-                <p className="text-xs text-muted-foreground line-clamp-2">{r.description}</p>
-                {r.ai_disease && (
-                  <p className="text-xs"><span className="text-muted-foreground">Bệnh:</span> <span className="font-semibold">{r.ai_disease}</span></p>
-                )}
-                <p className="text-[10px] text-muted-foreground pt-2 border-t border-border">
-                  {new Date(r.created_at).toLocaleString("vi-VN")}
-                </p>
-              </div>
-            </motion.div>
-          ))}
         </div>
       )}
     </div>
   );
 }
 
-function StatCard({ icon: Icon, label, value, color }: any) {
-  const gradients: any = {
-    primary: "gradient-primary", warning: "gradient-warning",
-    cyber: "gradient-cyber", danger: "gradient-danger",
-  };
-  return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border border-border bg-card p-4">
-      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${gradients[color] || gradients.primary} mb-3`}>
-        <Icon className="h-5 w-5 text-white" />
-      </div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-2xl font-bold mt-1">{value}</p>
-    </motion.div>
-  );
-}
-
 function StatusBadge({ status }: { status: string }) {
-  const map: any = {
-    pending: { label: "Chờ AI", icon: Clock, cls: "bg-warning/90 text-white" },
-    reviewing: { label: "Đang xử lý", icon: Loader2, cls: "bg-primary/90 text-white" },
-    resolved: { label: "Hoàn tất", icon: CheckCircle2, cls: "bg-success/90 text-white" },
+  const map: Record<string, { label: string; icon: typeof Clock; cls: string }> = {
+    pending: { label: 'Chờ AI', icon: Clock, cls: 'bg-warning/90 text-white' },
+    reviewing: { label: 'Đang xử lý', icon: Loader2, cls: 'bg-primary/90 text-white' },
+    resolved: { label: 'Hoàn tất', icon: CheckCircle2, cls: 'bg-success/90 text-white' },
   };
-  const s = map[status] || map.pending;
-  const Icon = s.icon;
+  const item = map[status] || map.pending;
+  const Icon = item.icon;
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold backdrop-blur ${s.cls}`}>
-      <Icon className="h-3 w-3" /> {s.label}
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold backdrop-blur ${item.cls}`}>
+      <Icon className="h-3 w-3" /> {item.label}
     </span>
   );
 }
 
 function SeverityBadge({ level }: { level: string }) {
-  const map: any = {
-    "cao": "bg-danger text-white",
-    "trung bình": "bg-warning text-white",
-    "thấp": "bg-success text-white",
+  const map: Record<string, string> = {
+    'cao': 'bg-danger text-white',
+    'trung bình': 'bg-warning text-white',
+    'thấp': 'bg-success text-white',
   };
-  return (
-    <span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase backdrop-blur ${map[level] || "bg-muted text-foreground"}`}>
-      {level}
-    </span>
-  );
+  return <span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase backdrop-blur ${map[level] || 'bg-muted text-foreground'}`}>{level}</span>;
 }

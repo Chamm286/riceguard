@@ -1,81 +1,101 @@
-"use client";
-import { motion } from "framer-motion";
-import { AlertTriangle, Bell, MapPin, Clock, CheckCircle2, TrendingUp } from "lucide-react";
+'use client';
 
-const alerts = [
-  { id: 1, type: "outbreak", title: "Bùng phát đạo ôn tại Vùng C1", desc: "Phát hiện 5 báo cáo mới về đạo ôn trong 24h tại khu vực của bạn", level: "critical", time: "10 phút trước", region: "Vùng C1 - Tân Hồng" },
-  { id: 2, type: "weather", title: "Nguy cơ khô vằn cao", desc: "Độ ẩm tăng 85% + nhiệt độ 26°C — điều kiện lý tưởng cho nấm khô vằn", level: "high", time: "2 giờ trước", region: "Toàn khu vực" },
-  { id: 3, type: "info", title: "5 nông dân cùng vùng báo bệnh", desc: "Vùng A2 ghi nhận 5 báo cáo đốm nâu trong tuần này", level: "medium", time: "1 ngày trước", region: "Vùng A2 - Tháp Mười" },
-];
+import { useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { AlertTriangle, Bell, CheckCircle2, Clock, MapPin, RefreshCw, TrendingUp } from 'lucide-react';
+import { useApiData } from '@/hooks/use-api-data';
+import { DataState } from '@/components/common/data-state';
+import { PageHeader } from '@/components/common/page-header';
+import { StatCard } from '@/components/common/stat-card';
+import { formatDateTime, formatNumber } from '@/lib/format';
 
-export default function FarmerAlertsPage() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Cảnh báo</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Thông báo về bệnh bùng phát và điều kiện thời tiết nguy hiểm
-        </p>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4">
-        <StatBox icon={AlertTriangle} label="Cảnh báo mới" value={alerts.length} color="danger" />
-        <StatBox icon={TrendingUp} label="Bùng phát vùng" value="2" color="warning" />
-        <StatBox icon={CheckCircle2} label="Đã xử lý" value="12" color="success" />
-      </div>
-
-      <div className="space-y-3">
-        {alerts.map((a, i) => (
-          <motion.div
-            key={a.id}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className={`rounded-2xl border bg-card p-5 hover:border-primary/50 transition cursor-pointer ${
-              a.level === "critical" ? "border-danger/50" :
-              a.level === "high" ? "border-warning/50" : "border-border"
-            }`}
-          >
-            <div className="flex items-start gap-4">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
-                a.level === "critical" ? "gradient-danger" :
-                a.level === "high" ? "gradient-warning" : "gradient-primary"
-              }`}>
-                <AlertTriangle className="h-5 w-5 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-sm">{a.title}</h3>
-                  <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                    a.level === "critical" ? "bg-danger/20 text-danger" :
-                    a.level === "high" ? "bg-warning/20 text-warning" :
-                    "bg-primary/20 text-primary"
-                  }`}>{a.level}</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">{a.desc}</p>
-                <div className="flex items-center gap-4 mt-3 text-[10px] text-muted-foreground">
-                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {a.region}</span>
-                  <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {a.time}</span>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  );
+interface Alert {
+  id: number;
+  title: string;
+  description: string | null;
+  severity: string;
+  alert_type: string;
+  status: string;
+  created_at: string;
+  field_name: string | null;
 }
 
-function StatBox({ icon: Icon, label, value, color }: any) {
-  const gradients: any = { danger: "gradient-danger", warning: "gradient-warning", success: "gradient-success" };
+function severityStyle(severity: string) {
+  const normalized = (severity || '').toLowerCase();
+  if (normalized.includes('cao')) return { border: 'border-danger/50', badge: 'bg-danger/20 text-danger', gradient: 'gradient-danger' };
+  if (normalized.includes('trung')) return { border: 'border-warning/50', badge: 'bg-warning/20 text-warning', gradient: 'gradient-warning' };
+  return { border: 'border-border', badge: 'bg-primary/20 text-primary', gradient: 'gradient-primary' };
+}
+
+export default function FarmerAlertsPage() {
+  const alertsQuery = useApiData<Alert[]>('/alerts/mine', { pollMs: 30000 });
+  const alerts = useMemo(() => alertsQuery.data || [], [alertsQuery.data]);
+
+  const stats = useMemo(() => ({
+    newAlerts: alerts.filter((alert) => alert.status === 'new').length,
+    disease: alerts.filter((alert) => alert.alert_type === 'disease').length,
+    resolved: alerts.filter((alert) => alert.status === 'resolved').length,
+  }), [alerts]);
+
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border border-border bg-card p-4">
-      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${gradients[color]} mb-3`}>
-        <Icon className="h-5 w-5 text-white" />
+    <div className="space-y-6">
+      <PageHeader
+        title="Cảnh báo"
+        description="Thông báo bệnh bùng phát và điều kiện thời tiết nguy hiểm"
+        action={
+          <button onClick={alertsQuery.refetch} className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium transition hover:border-primary/50">
+            <RefreshCw className={`h-4 w-4 ${alertsQuery.refreshing ? 'animate-spin' : ''}`} /> Làm mới
+          </button>
+        }
+      />
+
+      <div className="grid grid-cols-3 gap-4">
+        <StatCard label="Cảnh báo mới" value={formatNumber(stats.newAlerts)} icon={AlertTriangle} color="gradient-danger" />
+        <StatCard label="Cảnh báo bệnh" value={formatNumber(stats.disease)} icon={Bell} color="gradient-warning" delay={0.05} />
+        <StatCard label="Đã xử lý" value={formatNumber(stats.resolved)} icon={CheckCircle2} color="gradient-success" delay={0.1} />
       </div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-2xl font-bold mt-1">{value}</p>
-    </motion.div>
+
+      <DataState
+        loading={alertsQuery.loading}
+        error={alertsQuery.error}
+        empty={!alertsQuery.loading && !alertsQuery.error && alerts.length === 0}
+        emptyText="Chưa có cảnh báo nào"
+        onRetry={alertsQuery.refetch}
+      >
+        <div className="space-y-3">
+          {alerts.map((alert, index) => {
+            const style = severityStyle(alert.severity);
+            return (
+              <motion.div
+                key={alert.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: Math.min(index * 0.05, 0.3) }}
+                className={`rounded-2xl border bg-card p-5 transition hover:border-primary/50 ${style.border}`}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${style.gradient}`}>
+                    <AlertTriangle className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-sm font-semibold">{alert.title}</h3>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${style.badge}`}>{alert.severity}</span>
+                      {alert.status === 'resolved' && <span className="rounded-full bg-success/20 px-2 py-0.5 text-[10px] font-bold text-success">Đã xử lý</span>}
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">{alert.description || 'Không có mô tả'}</p>
+                    <div className="mt-3 flex flex-wrap items-center gap-4 text-[10px] text-muted-foreground">
+                      <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {alert.field_name || 'Toàn khu vực'}</span>
+                      <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {formatDateTime(alert.created_at)}</span>
+                      <span className="flex items-center gap-1"><TrendingUp className="h-3 w-3" /> {alert.alert_type === 'disease' ? 'Bệnh cây' : 'Nông nghiệp'}</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      </DataState>
+    </div>
   );
 }

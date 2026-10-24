@@ -1,9 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import { MapPin, AlertTriangle, Leaf, Satellite, TrendingUp, Radar, Shield, Activity, Signal, Wifi } from "lucide-react";
-import api from "@/lib/api";
+import { useApiData } from "@/hooks/use-api-data";
+import { DataState } from "@/components/common/data-state";
 
 const MapContainer = dynamic(() => import("react-leaflet").then((m) => m.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import("react-leaflet").then((m) => m.TileLayer), { ssr: false });
@@ -19,37 +20,46 @@ interface Field {
   owner_name?: string;
   active_alerts: number;
   status: string;
+  coordinates?: { lat?: number; lng?: number } | string | null;
 }
 
-const fieldCoords: Record<number, [number, number]> = {
-  1: [10.45, 105.63],
-  2: [10.35, 105.72],
-  3: [16.05, 108.22],
-  4: [15.95, 108.25],
-  5: [10.85, 105.45],
-  6: [10.5, 105.6],
-  7: [10.4, 105.7],
-  8: [16.0, 108.2],
-};
+function fieldCoordinate(field: Field): [number, number] | null {
+  if (!field.coordinates) return null;
+  let value = field.coordinates;
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  if (typeof value === 'object' && value && Number.isFinite(Number(value.lat)) && Number.isFinite(Number(value.lng))) {
+    return [Number(value.lat), Number(value.lng)];
+  }
+  return null;
+}
 
 export default function FieldsPage() {
-  const [fields, setFields] = useState<Field[]>([]);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    api.get("/fields").then((r) => setFields(r.data.data)).catch(() => {});
-  }, []);
+  const mounted = useSyncExternalStore(() => () => {}, () => true, () => false);
+  const fieldsQuery = useApiData<Field[]>("/fields", { pollMs: 30000 });
+  const fields = useMemo(() => fieldsQuery.data || [], [fieldsQuery.data]);
 
   return (
     <div className="space-y-6">
+      <DataState
+        loading={fieldsQuery.loading}
+        error={fieldsQuery.error}
+        empty={!fieldsQuery.loading && !fieldsQuery.error && fields.length === 0}
+        emptyText="Chưa có vùng canh tác nào"
+        onRetry={fieldsQuery.refetch}
+      >
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: "Vùng canh tác", value: fields.length, icon: Leaf, color: "gradient-primary" },
           { label: "Tổng hecta", value: fields.reduce((s, f) => s + Number(f.area_hectare), 0).toFixed(1), icon: Satellite, color: "gradient-cyber" },
           { label: "Cảnh báo", value: fields.reduce((s, f) => s + (f.active_alerts || 0), 0), icon: AlertTriangle, color: "gradient-warning" },
-          { label: "Sức khỏe TB", value: "98%", icon: TrendingUp, color: "gradient-success" },
+          { label: "Vùng an toàn", value: fields.filter((f) => !f.active_alerts).length, icon: TrendingUp, color: "gradient-success" },
         ].map((s, i) => {
           const Icon = s.icon;
           return (
@@ -110,7 +120,7 @@ export default function FieldsPage() {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               />
               {fields.map((f) => {
-                const coord = fieldCoords[f.id] || [10.45, 105.63];
+                const coord = fieldCoordinate(f) || [10.493, 105.688];
                 return (
                   <div key={f.id}>
                     <Circle
@@ -199,6 +209,7 @@ export default function FieldsPage() {
           </motion.div>
         ))}
       </div>
+      </DataState>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
@@ -7,7 +7,7 @@ import {
   Activity, Zap, ArrowRight, PieChart, Clock, Server, CircleDot,
   Volume2, VolumeX, Bell, RefreshCw, Sparkles
 } from "lucide-react";
-import api from "@/lib/api";
+import { useApiData } from "@/hooks/use-api-data";
 import AISummaryCard from "@/components/dashboard/AISummaryCard";
 import type { AISummary } from "@/lib/ai-summary";
 import {
@@ -97,20 +97,28 @@ function playAlarmSound(type: "critical" | "warning" = "critical") {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [recentAlerts, setRecentAlerts] = useState<RecentAlert[]>([]);
-  const [timeline, setTimeline] = useState<TimelinePoint[]>([]);
-  const [bySeverity, setBySeverity] = useState<SeverityPoint[]>([]);
-  const [liveLogs, setLiveLogs] = useState<LiveLog[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [newAlertFlash, setNewAlertFlash] = useState<RecentAlert | null>(null);
   const [refreshCountdown, setRefreshCountdown] = useState(3);
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [backendOnline, setBackendOnline] = useState(false);
-  const [aiSummary, setAiSummary] = useState<AISummary | null>(null);
   const lastAlertIdRef = useRef<number>(0);
   const isFirstLoadRef = useRef<boolean>(true);
+
+  const statsQuery = useApiData<Stats>("/dashboard/stats", { pollMs: 2000 });
+  const recentAlertsQuery = useApiData<RecentAlert[]>("/dashboard/recent-alerts", { pollMs: 2000 });
+  const timelineQuery = useApiData<TimelinePoint[]>("/dashboard/alerts-timeline", { pollMs: 5000 });
+  const severityQuery = useApiData<SeverityPoint[]>("/dashboard/alerts-by-severity", { pollMs: 5000 });
+  const logsQuery = useApiData<LiveLog[]>("/logs", { params: { limit: 6 }, pollMs: 5000 });
+  const aiSummaryQuery = useApiData<AISummary>("/dashboard/ai-summary", { pollMs: 60000 });
+
+  const stats = statsQuery.data;
+  const recentAlerts = useMemo(() => recentAlertsQuery.data || [], [recentAlertsQuery.data]);
+  const timeline = useMemo(() => timelineQuery.data || [], [timelineQuery.data]);
+  const bySeverity = useMemo(() => severityQuery.data || [], [severityQuery.data]);
+  const liveLogs = useMemo(() => logsQuery.data || [], [logsQuery.data]);
+  const aiSummary = aiSummaryQuery.data;
+  const backendOnline = !statsQuery.error && !recentAlertsQuery.error;
+  const lastUpdate = statsQuery.updatedAt;
 
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
@@ -121,79 +129,42 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [statsRes, alertsRes, timelineRes, severityRes, logsRes] = await Promise.all([
-          api.get("/dashboard/stats").catch(() => null),
-          api.get("/dashboard/recent-alerts").catch(() => null),
-          api.get("/dashboard/alerts-timeline").catch(() => null),
-          api.get("/dashboard/alerts-by-severity").catch(() => null),
-          api.get("/logs", { params: { limit: 6 } }).catch(() => null),
-        ]);
-
-        setBackendOnline(Boolean(statsRes || alertsRes || timelineRes || severityRes || logsRes));
-        if (statsRes?.data?.data) setStats(statsRes.data.data);
-        if (timelineRes?.data?.data) setTimeline(timelineRes.data.data);
-        if (severityRes?.data?.data) setBySeverity(severityRes.data.data);
-        if (logsRes?.data?.data) setLiveLogs(logsRes.data.data);
-        setLastUpdate(new Date());
-
-        // ✅ Fetch AI Summary từ A9 SOC Copilot
-        try {
-          const aiRes = await api.get("/dashboard/ai-summary");
-          if (aiRes?.data?.data) {
-            setAiSummary(aiRes.data.data);
-          }
-        } catch (e) {
-          console.log("AI Summary chưa có:", e);
-        }
-
-        if (alertsRes?.data?.data && alertsRes.data.data.length > 0) {
-          const newAlerts = alertsRes.data.data;
-          const latestAlert = newAlerts[0];
-
-          if (isFirstLoadRef.current) {
-            lastAlertIdRef.current = latestAlert.id;
-            isFirstLoadRef.current = false;
-          } else if (latestAlert.id > lastAlertIdRef.current) {
-            console.log("🚨 NEW ALERT:", latestAlert.id, latestAlert.title);
-
-            if (soundEnabled) {
-              if (latestAlert.severity === "critical") playAlarmSound("critical");
-              else if (latestAlert.severity === "high") playAlarmSound("warning");
-            }
-
-            if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-              try {
-                new Notification("🚨 CẢNH BÁO AN NINH MẠNG", {
-                  body: `${latestAlert.title}\nMức độ: ${latestAlert.severity.toUpperCase()}`,
-                  icon: "/favicon.ico",
-                  tag: `alert-${latestAlert.id}`,
-                });
-              } catch {}
-            }
-
-            setNewAlertFlash(latestAlert);
-            setTimeout(() => setNewAlertFlash(null), 6000);
-          }
-
-          lastAlertIdRef.current = latestAlert.id;
-          setRecentAlerts(newAlerts);
-        }
-      } catch (err) {
-        console.error("Fetch error:", err);
-      }
-    };
-
-    fetchData();
-    const interval = setInterval(fetchData, 2000);
     const clockInterval = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(clockInterval);
+  }, []);
 
-    return () => {
-      clearInterval(interval);
-      clearInterval(clockInterval);
-    };
-  }, [soundEnabled]);
+  useEffect(() => {
+    if (!recentAlerts.length) return;
+    const latestAlert = recentAlerts[0];
+
+    if (isFirstLoadRef.current) {
+      lastAlertIdRef.current = latestAlert.id;
+      isFirstLoadRef.current = false;
+      return;
+    }
+
+    if (latestAlert.id > lastAlertIdRef.current) {
+      if (soundEnabled) {
+        if (latestAlert.severity === "critical") playAlarmSound("critical");
+        else if (latestAlert.severity === "high") playAlarmSound("warning");
+      }
+
+      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
+        try {
+          new Notification("🚨 CẢNH BÁO AN NINH MẠNG", {
+            body: `${latestAlert.title}\nMức độ: ${latestAlert.severity.toUpperCase()}`,
+            icon: "/favicon.ico",
+            tag: `alert-${latestAlert.id}`,
+          });
+        } catch {}
+      }
+
+      setNewAlertFlash(latestAlert);
+      setTimeout(() => setNewAlertFlash(null), 6000);
+    }
+
+    lastAlertIdRef.current = latestAlert.id;
+  }, [recentAlerts, soundEnabled]);
 
   useEffect(() => {
     const countdownInterval = setInterval(() => {

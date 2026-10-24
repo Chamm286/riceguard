@@ -1,16 +1,16 @@
 "use client";
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ShieldAlert, Activity, Search, MapPin, Monitor, Clock, RefreshCw,
-  AlertTriangle, Bot, Flag, Link as LinkIcon, X, ExternalLink, Globe, Eye
+  ShieldAlert, Activity, Search, MapPin, Clock, RefreshCw,
+  AlertTriangle, Bot, Flag, Link as LinkIcon, X, ExternalLink, Globe, Eye, type LucideIcon
 } from "lucide-react";
 import { io, Socket } from "socket.io-client";
-import axios from "axios";
+import { useApiData } from "@/hooks/use-api-data";
+import { DataState } from "@/components/common/data-state";
 import VisitorMap from "./VisitorMap";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-const API_BASE = `${API_URL}/api`;
 
 interface Visitor {
   id: number;
@@ -59,65 +59,59 @@ interface AlertStats {
 
 export default function VisitorsPage() {
   const [tab, setTab] = useState<"alerts" | "logs" | "map">("alerts");
-  const [visitors, setVisitors] = useState<Visitor[]>([]);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [geoIPs, setGeoIPs] = useState<GeoIP[]>([]);
-  const [alertStats, setAlertStats] = useState<AlertStats | null>(null);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [severityFilter, setSeverityFilter] = useState("");
   const [liveCount, setLiveCount] = useState(0);
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
-  const fetchAll = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const headers = { Authorization: `Bearer ${token}` };
+  const visitorsQuery = useApiData<Visitor[]>("/visitors", { params: { limit: 200 }, pollMs: 10000 });
+  const alertsQuery = useApiData<Alert[]>("/visitors/alerts", { params: { limit: 200 }, pollMs: 10000 });
+  const mapQuery = useApiData<GeoIP[]>("/visitors/map", { pollMs: 10000 });
 
-      const [v, a, m] = await Promise.all([
-        axios.get(`${API_BASE}/visitors?limit=200`, { headers }).catch(() => ({ data: { data: [] } })),
-        axios.get(`${API_BASE}/visitors/alerts?limit=200`, { headers }).catch(() => ({ data: { data: [], stats: null } })),
-        axios.get(`${API_BASE}/visitors/map`, { headers }).catch(() => ({ data: { data: [] } })),
-      ]);
+  const visitors = useMemo(() => visitorsQuery.data || [], [visitorsQuery.data]);
+  const alerts = useMemo(() => alertsQuery.data || [], [alertsQuery.data]);
+  const geoIPs = useMemo(() => mapQuery.data || [], [mapQuery.data]);
+  const alertStats = useMemo<AlertStats>(() => ({
+    total: alerts.length,
+    critical: alerts.filter((alert) => alert.severity === "critical").length,
+    high: alerts.filter((alert) => alert.severity === "high").length,
+    unique_ips: new Set(alerts.map((alert) => alert.ip_address).filter(Boolean)).size,
+  }), [alerts]);
 
-      setVisitors(v.data.data || []);
-      setAlerts(a.data.data || []);
-      setAlertStats(a.data.stats || null);
-      setGeoIPs(m.data.data || []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+  const { refetch: refetchVisitors } = visitorsQuery;
+  const { refetch: refetchAlerts } = alertsQuery;
+  const { refetch: refetchMap } = mapQuery;
+
+  const fetchAll = () => {
+    refetchVisitors();
+    refetchAlerts();
+    refetchMap();
   };
 
   useEffect(() => {
-    fetchAll();
-    
-    // Auto refresh mỗi 10s
-    const refreshInterval = setInterval(fetchAll, 10000);
-
     const socket = io(API_URL, { transports: ["websocket", "polling"] });
     socketRef.current = socket;
+    const refresh = () => {
+      refetchVisitors();
+      refetchAlerts();
+      refetchMap();
+    };
 
     socket.on("connect", () => console.log("🔌 Socket connected"));
-    socket.on("new_visitor", (data: any) => {
-      console.log("👤 New visitor:", data);
+    socket.on("new_visitor", () => {
       setLiveCount((c) => c + 1);
-      // Refresh ngay lập tức
-      setTimeout(fetchAll, 300);
+      setTimeout(refresh, 300);
     });
 
     socket.on("report_updated", () => {
-      setTimeout(fetchAll, 300);
+      setTimeout(refresh, 300);
     });
 
     return () => {
       socket.disconnect();
-      clearInterval(refreshInterval);
     };
-  }, []);
+  }, [refetchVisitors, refetchAlerts, refetchMap]);
 
   const filteredAlerts = useMemo(() => {
     return alerts.filter((a) => {
@@ -221,23 +215,33 @@ export default function VisitorsPage() {
       {/* Content */}
       <AnimatePresence mode="wait">
         {tab === "alerts" && (
-          <motion.div key="alerts" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
-            {loading ? (
-              <div className="text-center py-10 text-muted-foreground">Đang tải...</div>
-            ) : filteredAlerts.length === 0 ? (
-              <Empty icon={ShieldAlert} text="Chưa có alert nào" />
-            ) : (
-              filteredAlerts.map((a, i) => (
-                <AlertCard key={a.id} alert={a} index={i} onClick={() => setSelectedAlert(a)} />
-              ))
-            )}
+          <motion.div key="alerts" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <DataState
+              loading={alertsQuery.loading}
+              error={alertsQuery.error}
+              empty={!alertsQuery.loading && !alertsQuery.error && filteredAlerts.length === 0}
+              emptyText="Chưa có alert nào"
+              onRetry={alertsQuery.refetch}
+            >
+              <div className="space-y-3">
+                {filteredAlerts.map((a, i) => (
+                  <AlertCard key={a.id} alert={a} index={i} onClick={() => setSelectedAlert(a)} />
+                ))}
+              </div>
+            </DataState>
           </motion.div>
         )}
 
         {tab === "logs" && (
-          <motion.div key="logs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="rounded-2xl border border-border bg-card overflow-hidden">
-            <div className="overflow-x-auto max-h-[600px]">
+          <motion.div key="logs" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <DataState
+              loading={visitorsQuery.loading}
+              error={visitorsQuery.error}
+              empty={!visitorsQuery.loading && !visitorsQuery.error && filteredVisitors.length === 0}
+              emptyText="Chưa có lượt truy cập nào"
+              onRetry={visitorsQuery.refetch}
+            >
+            <div className="overflow-x-auto max-h-[600px] rounded-2xl border border-border bg-card">
               <table className="w-full">
                 <thead className="sticky top-0 bg-card z-10">
                   <tr className="border-b border-border bg-accent/30">
@@ -269,15 +273,20 @@ export default function VisitorsPage() {
                 </tbody>
               </table>
             </div>
+            </DataState>
           </motion.div>
         )}
 
         {tab === "map" && (
-          <motion.div key="map" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-4">
-            {geoIPs.length === 0 ? (
-              <Empty icon={Globe} text="Chưa có IP nào có tọa độ" />
-            ) : (
-              <>
+          <motion.div key="map" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <DataState
+              loading={mapQuery.loading}
+              error={mapQuery.error}
+              empty={!mapQuery.loading && !mapQuery.error && geoIPs.length === 0}
+              emptyText="Chưa có IP nào có tọa độ"
+              onRetry={mapQuery.refetch}
+            >
+              <div className="space-y-4">
                 <div className="rounded-2xl border border-border overflow-hidden">
                   <VisitorMap geoIPs={geoIPs} />
                 </div>
@@ -309,8 +318,8 @@ export default function VisitorsPage() {
                     ))}
                   </div>
                 </div>
-              </>
-            )}
+              </div>
+            </DataState>
           </motion.div>
         )}
       </AnimatePresence>
@@ -324,8 +333,8 @@ export default function VisitorsPage() {
 }
 
 function AlertCard({ alert, index, onClick }: { alert: Alert; index: number; onClick: () => void }) {
-  const icons: any = { bot_detected: Bot, foreign_visitor: Flag, suspicious_path: LinkIcon, suspicious_ua: AlertTriangle };
-  const colors: any = {
+  const icons: Record<string, LucideIcon> = { bot_detected: Bot, foreign_visitor: Flag, suspicious_path: LinkIcon, suspicious_ua: AlertTriangle };
+  const colors: Record<string, { bg: string; border: string; text: string; grad: string }> = {
     critical: { bg: "bg-danger/10", border: "border-danger/40", text: "text-danger", grad: "gradient-danger" },
     high: { bg: "bg-warning/10", border: "border-warning/40", text: "text-warning", grad: "gradient-warning" },
     medium: { bg: "bg-cyber/10", border: "border-cyber/40", text: "text-cyber", grad: "gradient-cyber" },
@@ -433,8 +442,8 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
   );
 }
 
-function StatCard({ icon: Icon, label, value, color }: any) {
-  const gradients: any = { primary: "gradient-primary", warning: "gradient-warning", cyber: "gradient-cyber", danger: "gradient-danger", success: "gradient-success" };
+function StatCard({ icon: Icon, label, value, color }: { icon: LucideIcon; label: string; value: string | number; color: string }) {
+  const gradients: Record<string, string> = { primary: "gradient-primary", warning: "gradient-warning", cyber: "gradient-cyber", danger: "gradient-danger", success: "gradient-success" };
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
       className="rounded-2xl border border-border bg-card p-4">
@@ -447,7 +456,7 @@ function StatCard({ icon: Icon, label, value, color }: any) {
   );
 }
 
-function Tab({ active, onClick, children }: any) {
+function Tab({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <button onClick={onClick}
       className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition -mb-px ${
@@ -458,18 +467,7 @@ function Tab({ active, onClick, children }: any) {
   );
 }
 
-function Empty({ icon: Icon, text }: any) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-16 text-center">
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-accent mx-auto">
-        <Icon className="h-7 w-7 text-muted-foreground" />
-      </div>
-      <p className="text-sm text-muted-foreground mt-4">{text}</p>
-    </div>
-  );
-}
-
-function Th({ children }: any) {
+function Th({ children }: { children: ReactNode }) {
   return <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground bg-accent/30">{children}</th>;
 }
 

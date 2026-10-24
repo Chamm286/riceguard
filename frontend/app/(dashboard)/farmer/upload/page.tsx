@@ -3,15 +3,23 @@ import { useState, useRef, useEffect, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload, Sparkles, Loader2, CheckCircle2, Leaf, Send, X,
-  AlertTriangle, Bug, Lightbulb, Camera, History, MapPin,
-  Info, TrendingUp, BookOpen, LucideIcon
+  AlertTriangle, Bug, Lightbulb, Camera, History,
+  Info, LucideIcon
 } from "lucide-react";
 import { toast } from "sonner";
-import axios from "axios";
 import Link from "next/link";
+import api, { baseURL, getApiErrorMessage } from "@/lib/api";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-const API_BASE = `${API_URL}/api`;
+const UPLOAD_ORIGIN = baseURL.replace(/\/api$/, "");
+
+interface RecentReport {
+  id: number;
+  title: string;
+  image_url: string | null;
+  status: string;
+  ai_disease: string | null;
+  created_at: string;
+}
 
 interface AIResult {
   report_id: number;
@@ -31,7 +39,7 @@ export default function FarmerUploadPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AIResult | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [recentReports, setRecentReports] = useState<any[]>([]);
+  const [recentReports, setRecentReports] = useState<RecentReport[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
 
   // Chỉ cần ảnh là gửi được
@@ -40,12 +48,9 @@ export default function FarmerUploadPage() {
   useEffect(() => {
     const loadRecent = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get(`${API_BASE}/reports`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await api.get("/reports");
         setRecentReports((res.data.data || []).slice(0, 3));
-      } catch (e) { /* ignore */ }
+      } catch { /* ignore */ }
     };
     loadRecent();
   }, []);
@@ -78,21 +83,15 @@ export default function FarmerUploadPage() {
 
     setUploading(true);
     try {
-      const token = localStorage.getItem("token");
       const formData = new FormData();
-      
+
       // Tự động tạo tiêu đề nếu chưa có
       const autoTitle = note.trim() || `Báo cáo ${new Date().toLocaleDateString("vi-VN")} ${new Date().toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`;
       formData.append("title", autoTitle);
       formData.append("description", symptoms.trim() || "Nông dân gửi ảnh để AI phân tích");
       formData.append("image", file);
 
-      const res = await axios.post(`${API_BASE}/reports`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const res = await api.post("/reports", formData, { timeout: 60000 });
 
       const reportId = res.data.data.id;
       toast.success(`Đã gửi ảnh #${reportId}. AI đang phân tích...`);
@@ -104,9 +103,7 @@ export default function FarmerUploadPage() {
       const poll = setInterval(async () => {
         attempts++;
         try {
-          const detail = await axios.get(`${API_BASE}/reports/${reportId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          const detail = await api.get(`/reports/${reportId}`, { timeout: 15000 });
           const r = detail.data.data;
 
           if (r.ai_analysis && r.ai_severity) {
@@ -129,11 +126,11 @@ export default function FarmerUploadPage() {
             setAnalyzing(false);
             toast.error("AI xử lý quá lâu. Vui lòng thử lại.");
           }
-        } catch (e) { /* ignore */ }
+        } catch { /* ignore */ }
       }, 3000);
-    } catch (err: any) {
+    } catch (err) {
       setUploading(false);
-      toast.error(err.response?.data?.message || "Upload thất bại");
+      toast.error(getApiErrorMessage(err));
     }
   };
 
@@ -438,7 +435,7 @@ export default function FarmerUploadPage() {
               <div key={r.id} className="flex gap-3 rounded-xl border border-border p-3 hover:border-primary/50 transition">
                 {r.image_url && (
                   <img
-                    src={`${API_URL}${r.image_url}`}
+                    src={`${UPLOAD_ORIGIN}${r.image_url}`}
                     alt={r.title}
                     className="h-16 w-16 rounded-lg object-cover"
                   />

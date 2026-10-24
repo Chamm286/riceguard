@@ -1,98 +1,123 @@
-"use client";
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { Leaf, TrendingUp, AlertTriangle, Cloud, Droplets, Thermometer, ArrowRight } from "lucide-react";
-import Link from "next/link";
-import axios from "axios";
+'use client';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+import { useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { AlertTriangle, ArrowRight, Cloud, Droplets, Leaf, Thermometer, TrendingUp } from 'lucide-react';
+import Link from 'next/link';
+import { useApiData } from '@/hooks/use-api-data';
+import { useAuth } from '@/hooks/use-auth';
+import { DataState } from '@/components/common/data-state';
+import { StatCard } from '@/components/common/stat-card';
+import { formatNumber } from '@/lib/format';
+
+interface Report {
+  id: number;
+  ai_severity: string | null;
+  ai_disease: string | null;
+}
+
+interface Alert {
+  id: number;
+  severity: string;
+  status: string;
+}
+
+interface Weather {
+  current: {
+    temperature: number;
+    humidity: number;
+    precipitation: number;
+    windSpeed: number;
+    weather: string;
+  };
+  daily: Array<{ rainProbability: number; rain: number }>;
+}
+
+function severityKey(value: string | null) {
+  const normalized = (value || '').toLowerCase().replace(/[*\s]/g, '');
+  if (normalized.includes('cao')) return 'cao';
+  if (normalized.includes('trungbinh')) return 'trung bình';
+  return '';
+}
 
 export default function FarmerDashboard() {
-  const [userName, setUserName] = useState("");
-  const [stats, setStats] = useState({ total: 0, severe: 0, healthy: 0 });
+  const { user } = useAuth();
+  const reportsQuery = useApiData<Report[]>('/reports', { pollMs: 30000 });
+  const alertsQuery = useApiData<Alert[]>('/alerts/mine', { pollMs: 30000 });
+  const weatherQuery = useApiData<Weather>('/weather', { pollMs: 600000 });
 
-  useEffect(() => {
-    const u = localStorage.getItem("user");
-    if (u) setUserName(JSON.parse(u).full_name || "Nông dân");
+  const reports = useMemo(() => reportsQuery.data || [], [reportsQuery.data]);
+  const alerts = useMemo(() => alertsQuery.data || [], [alertsQuery.data]);
+  const weather = weatherQuery.data;
 
-    const fetchStats = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get(`${API_URL}/api/reports`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const reports = res.data.data || [];
-        setStats({
-          total: reports.length,
-          severe: reports.filter((r: any) => r.ai_severity === "cao").length,
-          healthy: reports.filter((r: any) => r.ai_disease === "không có" || r.ai_disease === "Khong co").length,
-        });
-      } catch { /* ignore */ }
-    };
-    fetchStats();
-  }, []);
+  const stats = useMemo(() => ({
+    total: reports.length,
+    severe: reports.filter((report) => severityKey(report.ai_severity) === 'cao').length,
+    healthy: reports.filter((report) => !report.ai_disease || report.ai_disease.toLowerCase() === 'không có').length,
+    openAlerts: alerts.filter((alert) => alert.status === 'new' || alert.status === 'processing').length,
+  }), [reports, alerts]);
+
+  const loading = reportsQuery.loading || alertsQuery.loading;
+  const error = reportsQuery.error || alertsQuery.error;
+  const refetch = () => {
+    reportsQuery.refetch();
+    alertsQuery.refetch();
+    weatherQuery.refetch();
+  };
 
   return (
     <div className="space-y-6">
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
         className="relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/20 via-card to-card p-8">
-        <div className="absolute top-0 right-0 h-64 w-64 gradient-primary rounded-full blur-3xl opacity-20" />
+        <div className="absolute right-0 top-0 h-64 w-64 rounded-full gradient-primary opacity-20 blur-3xl" />
         <div className="relative">
-          <p className="text-sm font-semibold text-primary uppercase tracking-widest">Xin chào</p>
-          <h1 className="text-3xl font-bold mt-2">{userName} 👋</h1>
-          <p className="text-sm text-muted-foreground mt-2 max-w-xl">
-            Hệ thống cảnh báo sớm dịch bệnh cây lúa — AI phân tích hình ảnh, phát hiện sớm sâu bệnh
+          <p className="text-sm font-semibold uppercase tracking-widest text-primary">Xin chào</p>
+          <h1 className="mt-2 text-3xl font-bold">{user?.full_name || user?.username || 'Nông dân'} 👋</h1>
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+            Hệ thống cảnh báo sớm dịch bệnh cây lúa — dữ liệu báo cáo, cảnh báo và thời tiết lấy trực tiếp từ backend.
           </p>
           <Link href="/farmer/upload"
-            className="inline-flex items-center gap-2 mt-5 rounded-xl gradient-primary text-white px-5 py-2.5 text-sm font-semibold shadow-lg glow hover:opacity-90">
+            className="mt-5 inline-flex items-center gap-2 rounded-xl gradient-primary px-5 py-2.5 text-sm font-semibold text-white shadow-lg glow hover:opacity-90">
             <Leaf className="h-4 w-4" /> Gửi báo cáo mới <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard icon={Leaf} label="Tổng báo cáo" value={stats.total} color="primary" />
-        <MetricCard icon={AlertTriangle} label="Bệnh nặng" value={stats.severe} color="danger" />
-        <MetricCard icon={TrendingUp} label="Khỏe mạnh" value={stats.healthy} color="success" />
-        <MetricCard icon={Cloud} label="Dự báo mưa" value="60%" color="cyber" />
-      </div>
+      {weatherQuery.error && (
+        <div className="rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
+          Không tải được thời tiết: {weatherQuery.error}
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <WeatherCard icon={Thermometer} label="Nhiệt độ" value="32°C" sub="Cao hơn TB 2°C" color="danger" />
-        <WeatherCard icon={Droplets} label="Độ ẩm" value="78%" sub="Thuận lợi cho nấm" color="warning" />
-        <WeatherCard icon={Cloud} label="Mưa 24h" value="12mm" sub="Bình thường" color="cyber" />
-      </div>
+      <DataState loading={loading} error={error} onRetry={refetch}>
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            <StatCard label="Tổng báo cáo" value={formatNumber(stats.total)} icon={Leaf} />
+            <StatCard label="Bệnh nặng" value={formatNumber(stats.severe)} icon={AlertTriangle} color="gradient-danger" delay={0.05} />
+            <StatCard label="Khỏe mạnh" value={formatNumber(stats.healthy)} icon={TrendingUp} color="gradient-success" delay={0.1} />
+            <StatCard label="Cảnh báo mở" value={formatNumber(stats.openAlerts)} icon={Cloud} color="gradient-cyber" delay={0.15} />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <WeatherCard icon={Thermometer} label="Nhiệt độ" value={weather ? `${weather.current.temperature}°C` : '—'} sub={weather?.current.weather || 'Đang tải...'} color="text-danger" />
+            <WeatherCard icon={Droplets} label="Độ ẩm" value={weather ? `${weather.current.humidity}%` : '—'} sub="Dữ liệu Open-Meteo" color="text-warning" />
+            <WeatherCard icon={Cloud} label="Mưa 24h" value={weather ? `${weather.daily?.[0]?.rainProbability ?? 0}%` : '—'} sub={weather ? `${weather.current.precipitation} mm hiện tại` : 'Đang tải...'} color="text-cyber" />
+          </div>
+        </div>
+      </DataState>
     </div>
   );
 }
 
-function MetricCard({ icon: Icon, label, value, color }: any) {
-  const gradients: any = {
-    primary: "gradient-primary", danger: "gradient-danger",
-    success: "gradient-success", cyber: "gradient-cyber",
-  };
-  return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border border-border bg-card p-5 hover:border-primary/50 transition">
-      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${gradients[color]} mb-3 shadow-lg`}>
-        <Icon className="h-5 w-5 text-white" />
-      </div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-2xl font-bold mt-1">{value}</p>
-    </motion.div>
-  );
-}
-
-function WeatherCard({ icon: Icon, label, value, sub, color }: any) {
-  const colors: any = { danger: "text-danger", warning: "text-warning", cyber: "text-cyber" };
+function WeatherCard({ icon: Icon, label, value, sub, color }: { icon: typeof Thermometer; label: string; value: string; sub: string; color: string }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
-      <div className="flex items-center gap-3 mb-3">
-        <Icon className={`h-5 w-5 ${colors[color]}`} />
+      <div className="mb-3 flex items-center gap-3">
+        <Icon className={`h-5 w-5 ${color}`} />
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
       </div>
       <p className="text-3xl font-bold">{value}</p>
-      <p className="text-xs text-muted-foreground mt-1">{sub}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
     </div>
   );
 }

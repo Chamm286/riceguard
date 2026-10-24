@@ -5,6 +5,7 @@ require('dotenv').config();
 const pool = require('./config/database');
 const { startLogReader } = require('./services/logReader');
 const { startAlertPoller } = require('./services/alertPoller');
+const { syncWorkflowRegistry } = require('./controllers/workflow.controller');
 
 const PORT = process.env.PORT || 5000;
 
@@ -64,4 +65,8 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server chạy tại http://0.0.0.0:${PORT}`);
   startAlertPoller();
   startLogReader();
+  syncWorkflowRegistry({ force: true }).catch((err) => console.log(`⚠️ Không đồng bộ n8n registry: ${err.message}`));
+  setInterval(() => {
+    syncWorkflowRegistry({ force: true }).catch((err) => console.log(`⚠️ Không đồng bộ n8n registry: ${err.message}`));
+  }, 5 * 60 * 1000).unref();
 });

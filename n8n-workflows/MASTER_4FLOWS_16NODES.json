@@ -1,6 +1,6 @@
 [
   {
-    "name": "🟢 SOC Alert Triage (16 nodes)",
+    "name": "🟢 SOC Alert Triage",
     "nodes": [
       {
         "parameters": {
@@ -70,6 +70,36 @@
                 "id": "a3",
                 "name": "path",
                 "value": "={{ $json.body.path }}",
+                "type": "string"
+              },
+              {
+                "id": "a4",
+                "name": "type",
+                "value": "={{ $json.body.type || 'security_event' }}",
+                "type": "string"
+              },
+              {
+                "id": "a5",
+                "name": "severity",
+                "value": "={{ $json.body.severity || 'HIGH' }}",
+                "type": "string"
+              },
+              {
+                "id": "a6",
+                "name": "status",
+                "value": "={{ $json.body.status || 'NEW' }}",
+                "type": "string"
+              },
+              {
+                "id": "a7",
+                "name": "event_id",
+                "value": "={{ $json.body.event_id || '' }}",
+                "type": "string"
+              },
+              {
+                "id": "a8",
+                "name": "description",
+                "value": "={{ $json.body.payload || '' }}",
                 "type": "string"
               }
             ]
@@ -142,7 +172,7 @@
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "INSERT INTO alerts (alert_type,category,severity,title,description,ip_address,status) VALUES ($1,'security',$2,$3,$4,$5,'new') RETURNING id;",
+          "query": "INSERT INTO alerts (alert_type,category,severity,title,description,ip_address,status) VALUES ($1,'security',LOWER($2),$3,$4,$5,'new') RETURNING id;",
           "options": {
             "queryReplacement": "={{ [$json.attack_type,$json.severity,$json.title,$json.description,$json.ip] }}"
           }
@@ -154,7 +184,13 @@
         "position": [
           680,
           -80
-        ]
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
       },
       {
         "parameters": {
@@ -171,7 +207,13 @@
         "position": [
           920,
           -80
-        ]
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
       },
       {
         "parameters": {
@@ -229,7 +271,13 @@
         "position": [
           1400,
           40
-        ]
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
       },
       {
         "parameters": {
@@ -246,7 +294,14 @@
         "position": [
           1640,
           -40
-        ]
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
       },
       {
         "parameters": {
@@ -294,7 +349,14 @@
         "position": [
           920,
           220
-        ]
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
       }
     ],
     "connections": {
@@ -438,7 +500,7 @@
     "id": "830a6825-594b-448a-bd8b-9781f5637ada"
   },
   {
-    "name": "🌾 Rice Disease Diagnosis (16 nodes)",
+    "name": "🌾 Rice Disease Diagnosis",
     "nodes": [
       {
         "parameters": {
@@ -501,7 +563,7 @@
               {
                 "id": "a2",
                 "name": "image_url",
-                "value": "=http://localhost:5000{{ $json.body.image_url }}",
+                "value": "={{ $json.body.image_url.startsWith('http') ? $json.body.image_url : 'http://localhost:5000' + $json.body.image_url }}",
                 "type": "string"
               },
               {
@@ -616,7 +678,13 @@
         "position": [
           1160,
           -80
-        ]
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
       },
       {
         "parameters": {
@@ -633,7 +701,13 @@
         "position": [
           1160,
           80
-        ]
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
       },
       {
         "parameters": {
@@ -676,7 +750,14 @@
         "position": [
           1640,
           -40
-        ]
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
       },
       {
         "parameters": {
@@ -724,7 +805,14 @@
         "position": [
           920,
           160
-        ]
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
       }
     ],
     "connections": {
@@ -790,11 +878,6 @@
               "node": "🗄️ Update Report",
               "type": "main",
               "index": 0
-            },
-            {
-              "node": "🗄️ Query Farmer",
-              "type": "main",
-              "index": 0
             }
           ]
         ]
@@ -803,7 +886,7 @@
         "main": [
           [
             {
-              "node": "🔀 Severity High?",
+              "node": "🗄️ Query Farmer",
               "type": "main",
               "index": 0
             }
@@ -866,7 +949,7 @@
     "id": "e5ccd565-4e63-490c-9f2c-67aa63985d2d"
   },
   {
-    "name": "🛰️ Sentinel-2 Sync (16 nodes)",
+    "name": "🛰️ Sentinel-2 Sync",
     "nodes": [
       {
         "parameters": {
@@ -927,7 +1010,7 @@
           "url": "http://localhost:5001/api/analyze-sentinel",
           "sendBody": true,
           "specifyBody": "json",
-          "jsonBody": "={{ JSON.stringify({ lat: 16.0, lng: 108.0, ndvi: 0.42, ndre: 0.31 }) }}"
+          "jsonBody": "={{ JSON.stringify({ lat: ($json.body && $json.body.lat) || 16.0, lng: ($json.body && $json.body.lng) || 108.0, ndvi: ($json.body && $json.body.ndvi) || 0.42, ndre: ($json.body && $json.body.ndre) || 0.31, field_id: ($json.body && $json.body.field_id) || 1, zoom: ($json.body && $json.body.zoom) || 16, field_name: ($json.body && $json.body.field_name) || 'Vùng canh tác' }) }}"
         },
         "id": "n2",
         "name": "🌐 Call GEE/AI",
@@ -940,7 +1023,7 @@
       },
       {
         "parameters": {
-          "jsCode": "const d=$input.first().json;const ndvi=Number(d.ndvi||0);const ndre=Number(d.ndre||0);if(ndvi<0||ndvi>1) throw new Error('NDVI invalid');return [{json:{ndvi,ndre,status:d.status||'unknown',disease:d.disease||'none',confidence:d.confidence||0.9,created_at:new Date().toISOString()}}];"
+          "jsCode": "const d=$input.first().json;const ndvi=Number(d.ndvi||0);const ndre=Number(d.ndre||0);if(ndvi<0||ndvi>1) throw new Error('NDVI invalid');let fieldId=1;try{const wh=$('📥 Webhook - Satellite Analyze').first().json;fieldId=Number(wh.body?.field_id||1);}catch(e){}return [{json:{ndvi,ndre,field_id:fieldId,status:d.status||'unknown',disease:d.disease||'none',confidence:d.confidence||0.9,created_at:new Date().toISOString()}}];"
         },
         "id": "n3",
         "name": "🧠 Validate Data",
@@ -983,9 +1066,9 @@
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "INSERT INTO features (field_id,window_start,window_end,ndvi_avg,ndre_avg,created_at) VALUES (1,NOW()-INTERVAL '1 day',NOW(),$1,$2,NOW()) RETURNING id;",
+          "query": "INSERT INTO features (field_id,window_start,window_end,ndvi_avg,ndre_avg,created_at) VALUES ($3,NOW()-INTERVAL '1 day',NOW(),$1,$2,NOW()) RETURNING id;",
           "options": {
-            "queryReplacement": "={{ [$('🧠 Parse Result').first().json.ndvi,$('🧠 Parse Result').first().json.ndre] }}"
+            "queryReplacement": "={{ [$('🧠 Parse Result').first().json.ndvi,$('🧠 Parse Result').first().json.ndre,$('🧠 Parse Result').first().json.field_id] }}"
           }
         },
         "id": "n5",
@@ -995,7 +1078,13 @@
         "position": [
           680,
           -80
-        ]
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
       },
       {
         "parameters": {
@@ -1012,14 +1101,20 @@
         "position": [
           920,
           -80
-        ]
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
       },
       {
         "parameters": {
           "operation": "executeQuery",
-          "query": "UPDATE fields SET status=$1, updated_at=NOW() WHERE id=1",
+          "query": "UPDATE fields SET status=$1, updated_at=NOW() WHERE id=$2",
           "options": {
-            "queryReplacement": "={{ [$('🧠 Parse Result').first().json.status] }}"
+            "queryReplacement": "={{ [$('🧠 Parse Result').first().json.status,$('🧠 Parse Result').first().json.field_id] }}"
           }
         },
         "id": "n7",
@@ -1029,7 +1124,13 @@
         "position": [
           1160,
           -80
-        ]
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
       },
       {
         "parameters": {
@@ -1072,7 +1173,14 @@
         "position": [
           1640,
           -120
-        ]
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
       },
       {
         "parameters": {
@@ -1089,7 +1197,14 @@
         "position": [
           1640,
           40
-        ]
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
       },
       {
         "parameters": {
@@ -1137,6 +1252,28 @@
         "position": [
           920,
           160
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "sentinel-analyze",
+          "options": {}
+        },
+        "id": "wh-sentinel",
+        "name": "📥 Webhook - Satellite Analyze",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          -400,
+          -180
         ]
       }
     ],
@@ -1268,13 +1405,24 @@
             }
           ]
         ]
+      },
+      "📥 Webhook - Satellite Analyze": {
+        "main": [
+          [
+            {
+              "node": "🌐 Call GEE/AI",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "active": true,
     "id": "fa637cec-04ed-4d43-bcb5-db173382b55d"
   },
   {
-    "name": "📊 Daily Security Report (16 nodes)",
+    "name": "📊 Daily Security Report",
     "nodes": [
       {
         "parameters": {
@@ -1341,7 +1489,13 @@
         "position": [
           -120,
           0
-        ]
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
       },
       {
         "parameters": {
@@ -1355,7 +1509,13 @@
         "position": [
           -120,
           160
-        ]
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
       },
       {
         "parameters": {
@@ -1414,25 +1574,14 @@
         "position": [
           680,
           40
-        ]
-      },
-      {
-        "parameters": {
-          "resource": "message",
-          "operation": "send",
-          "subject": "RiceGuard Daily Security Report",
-          "message": "={{ $json.msg }}",
-          "options": {},
-          "sendTo": "admin@example.com"
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
         },
-        "id": "n7",
-        "name": "📧 Send Gmail",
-        "type": "n8n-nodes-base.gmail",
-        "typeVersion": 2,
-        "position": [
-          680,
-          160
-        ]
+        "continueOnFail": true
       },
       {
         "parameters": {
@@ -1449,7 +1598,13 @@
         "position": [
           920,
           40
-        ]
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
       },
       {
         "parameters": {
@@ -1513,7 +1668,14 @@
         "position": [
           920,
           -200
-        ]
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
       },
       {
         "parameters": {
@@ -1526,6 +1688,21 @@
         "position": [
           -120,
           -120
+        ]
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "daily-report",
+          "options": {}
+        },
+        "id": "wh-daily",
+        "name": "📥 Webhook - Daily Report",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          -400,
+          -180
         ]
       }
     ],
@@ -1591,27 +1768,11 @@
               "node": "🔔 Notify Telegram",
               "type": "main",
               "index": 0
-            },
-            {
-              "node": "📧 Send Gmail",
-              "type": "main",
-              "index": 0
             }
           ]
         ]
       },
       "🔔 Notify Telegram": {
-        "main": [
-          [
-            {
-              "node": "🗄️ Save Summary",
-              "type": "main",
-              "index": 0
-            }
-          ]
-        ]
-      },
-      "📧 Send Gmail": {
         "main": [
           [
             {
@@ -1638,6 +1799,27 @@
           [
             {
               "node": "📤 Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📥 Webhook - Daily Report": {
+        "main": [
+          [
+            {
+              "node": "🗄️ Stats 24h",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "🗄️ Top 5 IP",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "🧠 Health Check",
               "type": "main",
               "index": 0
             }

@@ -98,12 +98,14 @@ router.post("/analyze", verifyToken, async (req, res) => {
     return res.status(400).json({ success: false, message: "Thiếu lat/lng" });
   }
 
-  const webhook = await callWebhook("sentinel-analyze", { lat, lng, zoom, field_name, field_id }, 60000);
+  const before = await latestFeature(field_id);
+  const webhook = await callWebhook("sentinel-analyze", { lat, lng, zoom, field_name, field_id }, 15000);
   if (webhook.ok) {
-    try {
-      return res.json(JSON.parse(webhook.body));
-    } catch (err) {
-      console.log(`⚠️ n8n satellite response không phải JSON: ${err.message}`);
+    const deadline = Date.now() + 12000;
+    while (Date.now() < deadline) {
+      const latest = await latestFeature(field_id);
+      if (latest && (!before || latest.id !== before.id)) break;
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
   } else {
     console.log(`⚠️ n8n satellite webhook không khả dụng: ${webhook.error || webhook.status}`);

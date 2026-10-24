@@ -2,8 +2,8 @@ const express = require("express");
 const router = express.Router();
 const pool = require("../config/database");
 const { verifyToken } = require("../middlewares/auth.middleware");
+const { callWebhook } = require("../services/security-event.service");
 
-const N8N_URL = (process.env.N8N_URL || "http://localhost:5678").replace(/\/+$/, "");
 const AI_URL = (process.env.AI_URL || "http://localhost:5001").replace(/\/+$/, "");
 
 function classify(ndvi) {
@@ -98,20 +98,15 @@ router.post("/analyze", verifyToken, async (req, res) => {
     return res.status(400).json({ success: false, message: "Thiếu lat/lng" });
   }
 
-  try {
-    const n8nRes = await fetch(`${N8N_URL}/webhook/satellite-analyze`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lat, lng, zoom, field_name, field_id }),
-      signal: AbortSignal.timeout(60000),
-    });
-
-    if (n8nRes.ok) {
-      const data = await n8nRes.json();
-      return res.json(data);
+  const webhook = await callWebhook("sentinel-analyze", { lat, lng, zoom, field_name, field_id }, 60000);
+  if (webhook.ok) {
+    try {
+      return res.json(JSON.parse(webhook.body));
+    } catch (err) {
+      console.log(`⚠️ n8n satellite response không phải JSON: ${err.message}`);
     }
-  } catch (err) {
-    console.log(`⚠️ n8n satellite webhook không khả dụng: ${err.message}`);
+  } else {
+    console.log(`⚠️ n8n satellite webhook không khả dụng: ${webhook.error || webhook.status}`);
   }
 
   try {

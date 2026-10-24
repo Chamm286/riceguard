@@ -1,6 +1,8 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
+const { getClientIP } = require('../utils/client-ip');
+const { sendSecurityEvent } = require('../services/security-event.service');
 require('dotenv').config();
 
 // Ghi log login fail + gọi webhook A1
@@ -24,22 +26,19 @@ const logLoginFailed = async (username, ip) => {
       );
       const failedCount = (countRes.rows[0]?.c || 0) + 1;
 
-      const n8nRes = await fetch('http://localhost:5678/webhook/security-event', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          source: 'auth',
-          event: 'ssh_failed',
-          failed_count: failedCount,
-          ip: ip || 'unknown',
-          path: '/login',
-          payload: message,
-          user: username,
-          category: 'brute_force',
-          message,
-        }),
+      const result = await sendSecurityEvent({
+        eventId: `auth-${Date.now()}`,
+        type: 'login_failed',
+        category: 'brute_force',
+        severity: failedCount >= 5 ? 'critical' : 'high',
+        title: `Đăng nhập thất bại từ ${ip || 'unknown'}`,
+        description: `${message} (${failedCount} lần trong 1 giờ)`,
+        ip: ip || 'unknown',
+        path: '/api/auth/login',
+        alertType: 'brute_force',
+        recommendation: failedCount >= 5 ? 'Block source IP immediately' : 'Monitor login attempts',
       });
-      console.log(`✅ security-event webhook: ${n8nRes.status}`);
+      if (result.ok) console.log(`✅ security-event webhook: ${result.status}`);
     } catch (e) {
       console.log(`⚠️ security-event webhook failed: ${e.message}`);
     }
@@ -52,7 +51,7 @@ const logLoginFailed = async (username, ip) => {
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
-    const clientIp = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const clientIp = getClientIP(req);
 
     if (!username || !password) {
       await logLoginFailed(username || 'empty', clientIp);

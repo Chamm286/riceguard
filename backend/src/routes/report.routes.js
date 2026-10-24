@@ -5,6 +5,7 @@ const router = express.Router();
 const pool = require("../config/database");
 const { verifyToken } = require("../middlewares/auth.middleware");
 const { requireRole } = require("../middlewares/role.middleware");
+const { callWebhook } = require("../services/security-event.service");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -45,23 +46,18 @@ router.post("/", verifyToken, upload.single("image"), async (req, res) => {
 
     const report = result.rows[0];
 
-    // Gọi n8n webhook D1
-    try {
-      const webhookRes = await fetch("http://localhost:5678/webhook/new-report", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: report.id,
-          user_id: userId,
-          title: report.title,
-          description: report.description,
-          image_url: report.image_url,
-          created_at: report.created_at,
-        }),
-      });
-      console.log("✅ D1 webhook:", webhookRes.status);
-    } catch (e) {
-      console.log("⚠️ D1 webhook failed:", e.message);
+    // Gọi n8n workflow chẩn đoán bệnh lúa
+    if (report.image_url) {
+      const webhook = await callWebhook("new-report", {
+        id: report.id,
+        user_id: userId,
+        title: report.title,
+        description: report.description,
+        image_url: report.image_url,
+        created_at: report.created_at,
+      }, 8000);
+      if (webhook.ok) console.log(`✅ new-report webhook: ${webhook.status}`);
+      else console.log(`⚠️ new-report webhook failed: ${webhook.error || webhook.status}`);
     }
 
     res.json({ success: true, data: report });

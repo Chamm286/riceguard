@@ -3,8 +3,12 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 require('dotenv').config();
+const { isTrustedProxy } = require('./utils/client-ip');
+const { securityMonitor } = require('./middlewares/security-monitor.middleware');
 
 const app = express();
+app.disable('x-powered-by');
+app.set('trust proxy', (ip) => isTrustedProxy(ip));
 
 // CORS cho tất cả origins (dev + LAN)
 app.use(cors({
@@ -28,6 +32,7 @@ app.use(helmet({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('dev'));
+app.use(securityMonitor);
 
 // ===== ROUTES =====
 app.use('/api/stats', require('./routes/stats.routes'));

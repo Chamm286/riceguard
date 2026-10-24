@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
+import { VisitorTracker } from "@/components/visitor-tracker";
 
 const inter = Inter({ subsets: ["latin", "vietnamese"] });
 
@@ -13,7 +14,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="vi" className="dark">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <VisitorTracker />
+        {children}
+      </body>
     </html>
   );
 }

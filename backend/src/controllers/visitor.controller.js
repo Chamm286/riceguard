@@ -90,6 +90,14 @@ exports.stats = async (req, res) => {
       WHERE country IS NOT NULL AND country != '??' AND country != 'LOCAL'
     `);
 
+    const alertStats = await pool.query(`
+      SELECT COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE LOWER(severity) = 'critical')::int AS critical,
+        COUNT(DISTINCT ip_address)::int AS unique_ips
+      FROM alerts
+      WHERE ip_address IS NOT NULL AND ip_address <> ''
+    `);
+
     res.json({
       success: true,
       data: {
@@ -97,6 +105,9 @@ exports.stats = async (req, res) => {
         last24h: last24h.rows[0].c,
         suspicious: suspicious.rows[0].c,
         countriesCount: geoCount.rows[0].c,
+        alertTotal: alertStats.rows[0].total,
+        alertCritical: alertStats.rows[0].critical,
+        alertUniqueIPs: alertStats.rows[0].unique_ips,
         countries: countries.rows,
         topIPs: topIPs.rows,
       },
@@ -170,12 +181,12 @@ exports.suspicious = async (req, res) => {
 exports.visitorAlerts = async (req, res) => {
   try {
     const { limit = 50, severity } = req.query;
-    let where = ["alert_type = 'visitor_suspicious'"];
+    let where = ["ip_address IS NOT NULL", "ip_address <> ''"];
     let params = [];
     let p = 1;
     
     if (severity) {
-      where.push(`severity = $${p++}`);
+      where.push(`LOWER(severity) = LOWER($${p++})`);
       params.push(severity);
     }
     
@@ -193,10 +204,10 @@ exports.visitorAlerts = async (req, res) => {
     
     const statsResult = await pool.query(`
       SELECT COUNT(*)::int AS total,
-        COUNT(*) FILTER (WHERE severity = 'critical')::int AS critical,
-        COUNT(*) FILTER (WHERE severity = 'high')::int AS high,
+        COUNT(*) FILTER (WHERE LOWER(severity) = 'critical')::int AS critical,
+        COUNT(*) FILTER (WHERE LOWER(severity) = 'high')::int AS high,
         COUNT(DISTINCT ip_address)::int AS unique_ips
-      FROM alerts WHERE alert_type = 'visitor_suspicious'
+      FROM alerts WHERE ip_address IS NOT NULL AND ip_address <> ''
     `);
     
     res.json({

@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, useMemo, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ShieldAlert, Activity, Search, MapPin, Clock, RefreshCw,
-  AlertTriangle, Bot, Flag, Link as LinkIcon, X, ExternalLink, Globe, Eye, type LucideIcon
+  AlertTriangle, Bot, Flag, Link as LinkIcon, X, ExternalLink, Globe, Eye, Code, Terminal, type LucideIcon
 } from "lucide-react";
 import { io, Socket } from "socket.io-client";
 import { useApiData } from "@/hooks/use-api-data";
@@ -331,16 +331,70 @@ export default function VisitorsPage() {
   );
 }
 
+const alertTypeLabels: Record<string, string> = {
+  sql_injection: "SQL Injection",
+  xss: "XSS",
+  path_traversal: "Path Traversal",
+  command_injection: "Command Injection",
+  brute_force: "Brute Force",
+  bot_detected: "Bot",
+  foreign_visitor: "IP nước ngoài",
+  suspicious_path: "Đường dẫn đáng ngờ",
+  suspicious_ua: "User-Agent đáng ngờ",
+  security_event: "Sự kiện bảo mật",
+  security: "Bảo mật",
+};
+
+const alertSeverityLabels: Record<string, string> = {
+  critical: "Nghiêm trọng",
+  high: "Cao",
+  medium: "Trung bình",
+  low: "Thấp",
+  warn: "Cảnh báo",
+};
+
+const alertStatusLabels: Record<string, string> = {
+  blocked: "Đã chặn",
+  new: "Mới",
+  reviewing: "Đang xem xét",
+  resolved: "Đã xử lý",
+};
+
+function alertType(alert: Alert) {
+  const type = (alert.alert_type || "").toLowerCase();
+  const threat = (alert.threat_type || "").toLowerCase();
+  const generic = ["security", "security_event"];
+  if (type && !generic.includes(type)) return type;
+  if (threat && !generic.includes(threat)) return threat;
+  return type || threat || "security";
+}
+
+function normalizeSeverity(value?: string) {
+  return (value || "low").toLowerCase();
+}
+
 function AlertCard({ alert, index, onClick }: { alert: Alert; index: number; onClick: () => void }) {
-  const icons: Record<string, LucideIcon> = { bot_detected: Bot, foreign_visitor: Flag, suspicious_path: LinkIcon, suspicious_ua: AlertTriangle };
+  const icons: Record<string, LucideIcon> = {
+    sql_injection: ShieldAlert,
+    xss: Code,
+    path_traversal: LinkIcon,
+    command_injection: Terminal,
+    brute_force: ShieldAlert,
+    bot_detected: Bot,
+    foreign_visitor: Flag,
+    suspicious_path: LinkIcon,
+    suspicious_ua: AlertTriangle,
+  };
   const colors: Record<string, { bg: string; border: string; text: string; grad: string }> = {
     critical: { bg: "bg-danger/10", border: "border-danger/40", text: "text-danger", grad: "gradient-danger" },
     high: { bg: "bg-warning/10", border: "border-warning/40", text: "text-warning", grad: "gradient-warning" },
     medium: { bg: "bg-cyber/10", border: "border-cyber/40", text: "text-cyber", grad: "gradient-cyber" },
     low: { bg: "bg-muted/10", border: "border-border", text: "text-muted-foreground", grad: "gradient-primary" },
   };
-  const c = colors[alert.severity?.toLowerCase()] || colors.low;
-  const Icon = icons[alert.threat_type] || AlertTriangle;
+  const severity = normalizeSeverity(alert.severity);
+  const c = colors[severity] || colors.low;
+  const type = alertType(alert);
+  const Icon = icons[type] || AlertTriangle;
 
   return (
     <motion.button
@@ -358,10 +412,10 @@ function AlertCard({ alert, index, onClick }: { alert: Alert; index: number; onC
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-semibold text-sm">{alert.title}</h3>
             <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${c.bg} ${c.text}`}>
-              {alert.severity}
+              {alertSeverityLabels[severity] || alert.severity}
             </span>
             <span className="text-[10px] uppercase px-2 py-0.5 rounded-full bg-accent/50 text-muted-foreground font-mono">
-              {alert.threat_type}
+              {alertTypeLabels[type] || type.replace(/_/g, " ")}
             </span>
           </div>
           <p className="text-xs text-muted-foreground mt-2">{alert.description}</p>
@@ -398,7 +452,7 @@ function AlertModal({ alert, onClose }: { alert: Alert; onClose: () => void }) {
 
         <div className="flex items-center gap-3 mb-4">
           <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${
-            alert.severity === "critical" ? "gradient-danger" : alert.severity === "high" ? "gradient-warning" : "gradient-primary"
+            normalizeSeverity(alert.severity) === "critical" ? "gradient-danger" : normalizeSeverity(alert.severity) === "high" ? "gradient-warning" : "gradient-primary"
           }`}>
             <ShieldAlert className="h-6 w-6 text-white" />
           </div>
@@ -409,11 +463,11 @@ function AlertModal({ alert, onClose }: { alert: Alert; onClose: () => void }) {
         </div>
 
         <div className="space-y-3">
-          <Row label="Loại threat" value={alert.threat_type} />
-          <Row label="Mức độ" value={alert.severity.toUpperCase()} />
+          <Row label="Loại cảnh báo" value={alertTypeLabels[alertType(alert)] || alertType(alert).replace(/_/g, " ")} />
+          <Row label="Mức độ" value={alertSeverityLabels[normalizeSeverity(alert.severity)] || alert.severity} />
           <Row label="IP" value={alert.ip_address} mono />
           <Row label="Mô tả" value={alert.description} />
-          <Row label="Trạng thái" value={alert.status} />
+          <Row label="Trạng thái" value={alertStatusLabels[alert.status?.toLowerCase()] || alert.status} />
           <Row label="Thời gian" value={new Date(alert.created_at).toLocaleString("vi-VN")} />
         </div>
 

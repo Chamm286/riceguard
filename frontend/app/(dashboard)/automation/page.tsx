@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Activity, CheckCircle, Clock, History, Info, Loader2, Pause,
-  Play, Power, Radio, RefreshCw, Users, Workflow, X, XCircle, Zap,
+  Activity, CheckCircle, Clock, FileBarChart, History, Info, Leaf, Loader2,
+  Pause, Play, Power, Radio, RefreshCw, Satellite, ShieldAlert, Users, Workflow,
+  X, XCircle, Zap,
 } from 'lucide-react';
 import { useApiData } from '@/hooks/use-api-data';
 import api, { getApiErrorMessage } from '@/lib/api';
@@ -66,6 +67,20 @@ const ownerColor: Record<string, string> = {
   'Tống Mỹ Trà': 'gradient-cyber',
   'Trần Anh Tuấn': 'gradient-success',
   'Hữu Thuận': 'gradient-warning',
+};
+
+const workflowLabels: Record<string, string> = {
+  'soc-alert-triage': 'SOC Alert Triage',
+  'rice-disease-diagnosis': 'Chẩn đoán bệnh lúa',
+  'sentinel-2-sync': 'Đồng bộ Sentinel-2',
+  'daily-security-report': 'Báo cáo bảo mật hàng ngày',
+};
+
+const workflowIcons = {
+  'soc-alert-triage': ShieldAlert,
+  'rice-disease-diagnosis': Leaf,
+  'sentinel-2-sync': Satellite,
+  'daily-security-report': FileBarChart,
 };
 
 export default function AutomationPage() {
@@ -212,7 +227,9 @@ export default function AutomationPage() {
 
       <DataState loading={workflowsQuery.loading} error={workflowsQuery.error} empty={!workflowsQuery.loading && !workflowsQuery.error && workflows.length === 0} emptyText="Không có workflow" onRetry={workflowsQuery.refetch}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {workflows.map((workflow, index) => (
+          {workflows.map((workflow, index) => {
+            const Icon = workflowIcons[workflow.slug as keyof typeof workflowIcons] || Zap;
+            return (
             <motion.div
               key={workflow.id}
               initial={{ opacity: 0, y: 12 }}
@@ -222,7 +239,7 @@ export default function AutomationPage() {
             >
               <div className="mb-4 flex items-start gap-3">
                 <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${ownerColor[workflow.owner] || 'gradient-primary'} glow`}>
-                  <Zap className="h-5 w-5 text-white" />
+                  <Icon className="h-5 w-5 text-white" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 flex flex-wrap items-center gap-2">
@@ -231,7 +248,7 @@ export default function AutomationPage() {
                       {statusLabel[workflow.status] || workflow.status}
                     </span>
                   </div>
-                  <h4 className="truncate font-semibold">{workflow.name}</h4>
+                  <h4 className="truncate font-semibold">{workflowLabels[workflow.slug] || workflow.name}</h4>
                   <p className="truncate font-mono text-[10px] text-muted-foreground">{workflow.slug}</p>
                 </div>
               </div>
@@ -240,19 +257,19 @@ export default function AutomationPage() {
 
               <div className="mb-4 grid grid-cols-2 gap-3 text-xs">
                 <div>
-                  <p className="text-muted-foreground">Trigger</p>
+                  <p className="text-muted-foreground">Kích hoạt</p>
                   <p className="mt-0.5 flex items-center gap-1 font-medium"><Radio className="h-3 w-3 text-primary" />{workflow.trigger_type || 'webhook'}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Owner</p>
+                  <p className="text-muted-foreground">Phụ trách</p>
                   <p className="mt-0.5 flex items-center gap-1 font-medium"><Users className="h-3 w-3" />{workflow.owner || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Executions</p>
+                  <p className="text-muted-foreground">Lần chạy</p>
                   <p className="mt-0.5 font-medium">{formatNumber(workflow.execution_count)}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Success</p>
+                  <p className="text-muted-foreground">Thành công</p>
                   <p className={`mt-0.5 font-medium ${Number(workflow.success_rate) >= 99 ? 'text-success' : Number(workflow.success_rate) >= 95 ? 'text-warning' : 'text-danger'}`}>
                     {formatPercent(workflow.success_rate, 1)}
                   </p>
@@ -287,7 +304,8 @@ export default function AutomationPage() {
                 </div>
               </div>
             </motion.div>
-          ))}
+            );
+          })}
         </div>
       </DataState>
 
@@ -297,7 +315,7 @@ export default function AutomationPage() {
             <motion.div initial={{ scale: 0.96, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96 }} onClick={(event) => event.stopPropagation()} className="flex max-h-[80vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
               <div className="flex items-center justify-between border-b border-border p-5">
                 <div>
-                  <h3 className="font-semibold">{selected.name}</h3>
+                  <h3 className="font-semibold">{workflowLabels[selected.slug] || selected.name}</h3>
                   <p className="font-mono text-xs text-muted-foreground">{selected.slug} • 30 lần chạy gần nhất</p>
                 </div>
                 <button onClick={() => setSelected(null)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent"><X className="h-4 w-4" /></button>

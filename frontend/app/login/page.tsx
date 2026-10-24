@@ -3,10 +3,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import api from "@/lib/api";
+import api, { getApiErrorMessage } from "@/lib/api";
 import {
   Shield, Lock, User as UserIcon, Loader2, ArrowRight, ArrowLeft,
-  Eye, EyeOff, CheckCircle, Sparkles, Mail, Smartphone
+  Eye, EyeOff, CheckCircle, Sparkles
 } from "lucide-react";
 
 export default function LoginPage() {
@@ -16,7 +16,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [remember, setRemember] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,8 +28,8 @@ export default function LoginPage() {
         localStorage.setItem("user", JSON.stringify(res.data.user));
         router.push("/dashboard");
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Đăng nhập thất bại");
+    } catch (err) {
+      setError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -43,15 +42,6 @@ export default function LoginPage() {
       <div className="absolute top-0 left-1/4 h-[600px] w-[600px] rounded-full bg-primary/20 blur-3xl animate-blob" />
       <div className="absolute bottom-0 right-1/4 h-[600px] w-[600px] rounded-full bg-cyber/20 blur-3xl animate-blob" style={{ animationDelay: "3s" }} />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[800px] w-[800px] rounded-full bg-cyan-500/5 blur-3xl" />
-
-      {/* Back button - hiển thị cả desktop */}
-      <Link
-        href="/"
-        className="absolute top-6 left-6 z-30 flex items-center gap-2 rounded-xl glass px-4 py-2.5 text-sm font-medium hover:bg-accent/50 hover:border-primary/30 transition group"
-      >
-        <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition" />
-        Trang chủ
-      </Link>
 
       {/* Left - Branding */}
       <div className="hidden lg:flex lg:w-1/2 relative z-10 flex-col justify-between p-12">
@@ -125,6 +115,11 @@ export default function LoginPage() {
             <p className="mt-1 text-sm text-muted-foreground">Nền tảng An ninh mạng Nông nghiệp</p>
           </div>
 
+          <Link href="/" className="mb-4 inline-flex items-center gap-2 text-xs text-muted-foreground transition hover:text-primary">
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Về trang chủ
+          </Link>
+
           <div className="glass-strong rounded-3xl border border-border p-8 shadow-2xl">
             <div className="mb-6">
               <h2 className="text-2xl font-semibold">Đăng nhập</h2>
@@ -152,13 +147,10 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                    <Lock className="h-3 w-3" />
-                    Mật khẩu
-                  </label>
-                  <a href="#" className="text-xs text-primary hover:underline">Quên mật khẩu?</a>
-                </div>
+                <label className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                  <Lock className="h-3 w-3" />
+                  Mật khẩu
+                </label>
                 <div className="relative group">
                   <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition" />
                   <input
@@ -179,25 +171,6 @@ export default function LoginPage() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="remember"
-                    checked={remember}
-                    onChange={(e) => setRemember(e.target.checked)}
-                    className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
-                  />
-                  <label htmlFor="remember" className="text-xs text-muted-foreground cursor-pointer select-none">
-                    Ghi nhớ đăng nhập
-                  </label>
-                </div>
-                <a href="#" className="text-xs text-muted-foreground hover:text-primary transition flex items-center gap-1">
-                  <Smartphone className="h-3 w-3" />
-                  2FA
-                </a>
               </div>
 
               {error && (
@@ -229,12 +202,9 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <div className="mt-6 rounded-xl border border-border bg-muted/30 p-3">
-              <p className="text-[11px] text-muted-foreground text-center flex items-center justify-center gap-1.5">
-                <Mail className="h-3 w-3" />
-                Demo: <span className="font-mono font-semibold text-primary">admin</span> /{" "}
-                <span className="font-mono font-semibold text-primary">admin123</span>
-              </p>
+            <div className="mt-6 flex items-center justify-center gap-2 text-[11px] text-muted-foreground">
+              <Lock className="h-3 w-3" />
+              Phiên đăng nhập được bảo vệ bằng JWT
             </div>
           </div>
 

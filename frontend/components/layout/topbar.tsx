@@ -1,51 +1,93 @@
 "use client";
-import { Bell, Search, Activity } from "lucide-react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Bell, ChevronRight, Menu, Settings, ShieldCheck } from "lucide-react";
+import { useApiData } from "@/hooks/use-api-data";
 
-const titles: Record<string, { title: string; desc: string }> = {
-  "/dashboard": { title: "Tổng quan hệ thống", desc: "Giám sát an ninh mạng realtime" },
-  "/alerts": { title: "Quản lý cảnh báo", desc: "Phân loại và xử lý sự cố" },
-  "/investigations": { title: "Điều tra sự cố", desc: "Theo dõi và phân tích chuyên sâu" },
-  "/threats": { title: "Mối đe dọa", desc: "Threat intelligence & feeds" },
-  "/automation": { title: "Tự động hóa n8n", desc: "4 luồng workflows đang hoạt động" },
-  "/logs": { title: "Nhật ký hệ thống", desc: "Lịch sử truy cập và sự kiện" },
-  "/fields": { title: "Vùng canh tác", desc: "Giám sát khu vực trồng lúa" },
-  "/assets": { title: "Quản lý tài sản", desc: "Server, sensor, IoT devices" },
-  "/playbooks": { title: "Playbooks", desc: "Kịch bản xử lý sự cố" },
-  "/compliance": { title: "Tuân thủ bảo mật", desc: "Checklist ISO 27001, GDPR" },
-  "/reports": { title: "Báo cáo & Thống kê", desc: "Xuất báo cáo định kỳ" },
-  "/settings": { title: "Cài đặt hệ thống", desc: "Cấu hình tài khoản và thông báo" },
+const labels: Record<string, string> = {
+  dashboard: "Tổng quan",
+  threats: "Mối đe dọa",
+  alerts: "Cảnh báo",
+  investigations: "Điều tra",
+  logs: "Nhật ký",
+  assets: "Tài sản",
+  fields: "Vùng canh tác",
+  reports: "Báo cáo",
+  playbooks: "Playbooks",
+  automation: "Tự động hóa",
+  compliance: "Tuân thủ",
+  settings: "Cài đặt",
+  admin: "Quản trị",
+  users: "Người dùng",
+  visitors: "Người truy cập",
+  system: "Hệ thống",
+  audit: "Audit log",
+  farmer: "Nông dân",
+  cyber: "Nông nghiệp",
 };
 
-export function Topbar() {
+function breadcrumb(pathname: string) {
+  const segments = pathname.split("/").filter(Boolean);
+  return segments.map((segment) => labels[segment] || segment.replace(/-/g, " "));
+}
+
+interface TopbarProps {
+  onMenu?: () => void;
+}
+
+export function Topbar({ onMenu }: TopbarProps) {
   const pathname = usePathname();
-  const info = titles[pathname] || { title: "RiceGuard", desc: "Nền tảng an ninh mạng" };
+  const parts = breadcrumb(pathname);
+  const health = useApiData<{ status: string }>("/health", { pollMs: 30000 });
+  const online = health.data?.status === "ok" && !health.error;
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background/80 backdrop-blur-xl px-6">
-      <div className="flex-1">
-        <h2 className="text-base font-semibold tracking-tight">{info.title}</h2>
-        <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-          <Activity className="h-3 w-3 text-primary" />
-          {info.desc}
-        </p>
-      </div>
-
-      <div className="hidden md:flex items-center gap-2 rounded-xl border border-border bg-card px-3.5 py-2 w-80 focus-within:border-primary/50 transition">
-        <Search className="h-4 w-4 text-muted-foreground" />
-        <input
-          placeholder="Tìm kiếm cảnh báo, log..."
-          className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-        />
-        <kbd className="hidden lg:inline-flex h-5 items-center rounded border border-border bg-muted px-1.5 text-[10px] font-mono text-muted-foreground">
-          ⌘K
-        </kbd>
-      </div>
-
-      <button className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card hover:bg-accent transition">
-        <Bell className="h-4 w-4" />
-        <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-danger animate-pulse-glow" />
+    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-xl md:px-6">
+      <button
+        onClick={onMenu}
+        aria-label="Mở menu"
+        className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground lg:hidden"
+      >
+        <Menu className="h-4 w-4" />
       </button>
+      <div className="flex min-w-0 items-center gap-2 text-sm">
+        <Link href="/dashboard" className="shrink-0 font-semibold text-muted-foreground transition hover:text-foreground">
+          RiceGuard
+        </Link>
+        {parts.map((part, index) => (
+          <span key={`${part}-${index}`} className="flex min-w-0 items-center gap-2">
+            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
+            <span className={index === parts.length - 1 ? "truncate font-medium" : "truncate text-muted-foreground"}>{part}</span>
+          </span>
+        ))}
+      </div>
+
+      <div className="ml-auto flex items-center gap-2">
+        <div className="hidden items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground sm:flex">
+          <span className="relative flex h-2 w-2">
+            <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${online ? "bg-success" : "bg-danger"} opacity-60`} />
+            <span className={`relative inline-flex h-2 w-2 rounded-full ${online ? "bg-success" : "bg-danger"}`} />
+          </span>
+          <ShieldCheck className={`h-3.5 w-3.5 ${online ? "text-success" : "text-danger"}`} />
+          {online ? "Hệ thống trực tuyến" : "Mất kết nối"}
+        </div>
+
+        <Link
+          href="/alerts"
+          aria-label="Xem cảnh báo"
+          className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card transition hover:bg-accent"
+        >
+          <Bell className="h-4 w-4" />
+        </Link>
+
+        <Link
+          href="/settings"
+          aria-label="Cài đặt"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card transition hover:bg-accent"
+        >
+          <Settings className="h-4 w-4" />
+        </Link>
+      </div>
     </header>
   );
 }

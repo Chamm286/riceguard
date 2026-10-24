@@ -5,8 +5,8 @@ import { useState, useEffect } from "react";
 import {
   LayoutDashboard, ShieldAlert, FileText, MapPin, Settings,
   Shield, LogOut, Fingerprint, FileBarChart, Home, Leaf,
-  Cloud, BookOpen, Bell, Users, Activity, ScrollText, Bug,
-  FlaskConical, Target, BarChart3, Server, LucideIcon
+  Cloud, BookOpen, Bell, Users, Activity, ScrollText,
+  FlaskConical, Target, Server, LucideIcon, X
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,7 @@ interface MenuSection {
 
 const menuSections: MenuSection[] = [
   {
-    title: "🌾 Nông dân",
+    title: "Nông dân",
     roles: ["farmer"],
     items: [
       { href: "/farmer/dashboard", label: "Tổng quan", icon: LayoutDashboard },
@@ -39,7 +39,7 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    title: "🛡️ An ninh mạng",
+    title: "An ninh mạng",
     roles: ["admin", "analyst"],
     items: [
       { href: "/dashboard", label: "Tổng quan", icon: LayoutDashboard },
@@ -51,7 +51,7 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    title: "🌾 Nông nghiệp",
+    title: "Nông nghiệp",
     roles: ["admin", "analyst"],
     items: [
       { href: "/cyber/farmer-reports", label: "Báo cáo lúa", icon: Leaf },
@@ -60,7 +60,7 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    title: "⚙️ Vận hành",
+    title: "Vận hành",
     roles: ["admin", "analyst"],
     items: [
       { href: "/playbooks", label: "Playbooks", icon: FlaskConical },
@@ -69,7 +69,7 @@ const menuSections: MenuSection[] = [
     ],
   },
   {
-    title: "🔧 Quản trị",
+    title: "Quản trị",
     roles: ["admin"],
     items: [
       { href: "/admin/users", label: "Người dùng", icon: Users },
@@ -81,7 +81,12 @@ const menuSections: MenuSection[] = [
   },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const role = user?.role || "viewer";
@@ -97,7 +102,7 @@ export function Sidebar() {
         });
         const json = await res.json();
         if (json.success) setBadges(json.data);
-      } catch (e) { /* ignore */ }
+      } catch { /* ignore */ }
     };
     fetchBadges();
     const interval = setInterval(fetchBadges, 30000);
@@ -107,9 +112,16 @@ export function Sidebar() {
   const visibleSections = menuSections.filter((s) => s.roles.includes(role));
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-border bg-card flex flex-col">
-      <div className="px-4 py-4 border-b border-border">
-        <Link href="/" className="group flex items-center gap-3 rounded-xl p-2 -m-2 hover:bg-primary/5 transition">
+    <>
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden" onClick={onClose} aria-hidden="true" />
+      )}
+      <aside className={cn(
+        "fixed left-0 top-0 z-50 flex h-screen w-64 flex-col border-r border-border bg-card transition-transform duration-200 lg:translate-x-0",
+        mobileOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+      <div className="flex items-center gap-2 border-b border-border px-4 py-4">
+        <Link href="/" className="group -m-2 flex flex-1 items-center gap-3 rounded-xl p-2 transition hover:bg-primary/5">
           <div className="relative flex h-10 w-10 items-center justify-center rounded-xl gradient-primary glow shrink-0 group-hover:scale-105 transition">
             <Shield className="h-5 w-5 text-white" />
             <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-success border-2 border-card" />
@@ -119,6 +131,9 @@ export function Sidebar() {
             <p className="text-[10px] text-muted-foreground -mt-0.5">Security Platform</p>
           </div>
         </Link>
+        <button onClick={onClose} aria-label="Đóng menu" className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent lg:hidden">
+          <X className="h-4 w-4" />
+        </button>
       </div>
 
       <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-4 space-y-5">
@@ -135,21 +150,22 @@ export function Sidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={onClose}
                     className={cn(
                       "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                       isActive
-                        ? "gradient-primary text-white shadow-lg glow"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                        ? "border border-primary/25 bg-primary/15 text-primary shadow-sm"
+                        : "border border-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
                     )}
                   >
                     <Icon className={cn("h-4 w-4 transition-transform", isActive && "scale-110")} />
                     <span className="flex-1">{item.label}</span>
-                    {item.badge && (
+                    {item.badge && badges[item.badge] > 0 && (
                       <span className={cn(
                         "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold",
-                        isActive ? "bg-white/25 text-white" : "bg-danger text-white animate-pulse"
+                        isActive ? "bg-primary/20 text-primary" : "bg-danger text-white"
                       )}>
-                        {badges[item.badge] || 0}
+                        {badges[item.badge]}
                       </span>
                     )}
                   </Link>
@@ -161,6 +177,7 @@ export function Sidebar() {
 
         <Link
           href="/"
+          onClick={onClose}
           className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition"
         >
           <Home className="h-4 w-4" />
@@ -182,11 +199,12 @@ export function Sidebar() {
             <p className="text-xs font-semibold truncate">{user?.full_name || "User"}</p>
             <p className="text-[10px] text-muted-foreground capitalize">{role}</p>
           </div>
-          <button onClick={logout} className="p-1.5 rounded-lg hover:bg-danger/20 transition text-muted-foreground hover:text-danger">
+          <button onClick={logout} aria-label="Đăng xuất" className="p-1.5 rounded-lg hover:bg-danger/20 transition text-muted-foreground hover:text-danger">
             <LogOut className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

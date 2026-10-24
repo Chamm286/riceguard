@@ -1,30 +1,36 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 
+function subscribeToken(callback: () => void) {
+  window.addEventListener("storage", callback);
+  return () => window.removeEventListener("storage", callback);
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [ok, setOk] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const token = useSyncExternalStore(
+    subscribeToken,
+    () => localStorage.getItem("token") ?? "",
+    () => "__server__"
+  );
+  const ready = token !== "__server__";
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/login");
-    } else {
-      setOk(true);
-    }
-  }, [router]);
+    if (ready && !token) router.replace("/login");
+  }, [ready, token, router]);
 
-  if (!ok) return null;
+  if (!ready || !token) return null;
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
-      <div className="pl-64">
-        <Topbar />
-        <main className="p-6">{children}</main>
+      <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
+      <div className="lg:pl-64">
+        <Topbar onMenu={() => setMobileOpen(true)} />
+        <main className="mx-auto max-w-[1600px] p-4 md:p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

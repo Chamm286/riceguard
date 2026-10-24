@@ -8,6 +8,9 @@ import {
 import { io, Socket } from "socket.io-client";
 import { useApiData } from "@/hooks/use-api-data";
 import { DataState } from "@/components/common/data-state";
+import { PageHeader } from "@/components/common/page-header";
+import { StatCard } from "@/components/common/stat-card";
+import { formatNumber } from "@/lib/format";
 import VisitorMap from "./VisitorMap";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
@@ -50,11 +53,12 @@ interface GeoIP {
   last_seen: string;
 }
 
-interface AlertStats {
-  total: number;
-  critical: number;
-  high: number;
-  unique_ips: number;
+interface VisitorStats {
+  totalVisitors: number;
+  last24h: number;
+  alertTotal: number;
+  alertCritical: number;
+  alertUniqueIPs: number;
 }
 
 export default function VisitorsPage() {
@@ -68,25 +72,23 @@ export default function VisitorsPage() {
   const visitorsQuery = useApiData<Visitor[]>("/visitors", { params: { limit: 200 }, pollMs: 10000 });
   const alertsQuery = useApiData<Alert[]>("/visitors/alerts", { params: { limit: 200 }, pollMs: 10000 });
   const mapQuery = useApiData<GeoIP[]>("/visitors/map", { pollMs: 10000 });
+  const statsQuery = useApiData<VisitorStats>("/visitors/stats", { pollMs: 30000 });
 
   const visitors = useMemo(() => visitorsQuery.data || [], [visitorsQuery.data]);
   const alerts = useMemo(() => alertsQuery.data || [], [alertsQuery.data]);
   const geoIPs = useMemo(() => mapQuery.data || [], [mapQuery.data]);
-  const alertStats = useMemo<AlertStats>(() => ({
-    total: alerts.length,
-    critical: alerts.filter((alert) => alert.severity === "critical").length,
-    high: alerts.filter((alert) => alert.severity === "high").length,
-    unique_ips: new Set(alerts.map((alert) => alert.ip_address).filter(Boolean)).size,
-  }), [alerts]);
+  const visitorStats = statsQuery.data;
 
   const { refetch: refetchVisitors } = visitorsQuery;
   const { refetch: refetchAlerts } = alertsQuery;
   const { refetch: refetchMap } = mapQuery;
+  const { refetch: refetchStats } = statsQuery;
 
   const fetchAll = () => {
     refetchVisitors();
     refetchAlerts();
     refetchMap();
+    refetchStats();
   };
 
   useEffect(() => {
@@ -96,6 +98,7 @@ export default function VisitorsPage() {
       refetchVisitors();
       refetchAlerts();
       refetchMap();
+      refetchStats();
     };
 
     socket.on("connect", () => console.log("🔌 Socket connected"));
@@ -111,12 +114,12 @@ export default function VisitorsPage() {
     return () => {
       socket.disconnect();
     };
-  }, [refetchVisitors, refetchAlerts, refetchMap]);
+  }, [refetchVisitors, refetchAlerts, refetchMap, refetchStats]);
 
   const filteredAlerts = useMemo(() => {
     return alerts.filter((a) => {
       const s = !search || a.ip_address?.includes(search) || a.title?.toLowerCase().includes(search.toLowerCase()) || a.threat_type?.toLowerCase().includes(search.toLowerCase());
-      const sv = !severityFilter || a.severity === severityFilter;
+      const sv = !severityFilter || a.severity?.toLowerCase() === severityFilter;
       return s && sv;
     });
   }, [alerts, search, severityFilter]);
@@ -132,28 +135,24 @@ export default function VisitorsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Người truy cập</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Giám sát IP, vị trí và mối đe dọa realtime
-          </p>
-        </div>
-        <button
-          onClick={fetchAll}
-          className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium hover:border-primary/50 transition"
-        >
-          <RefreshCw className="h-4 w-4" /> Làm mới
-        </button>
-      </div>
+      <PageHeader
+        title="Người truy cập"
+        description="Giám sát lượt truy cập, vị trí IP và dấu hiệu bất thường"
+        action={
+          <button
+            onClick={fetchAll}
+            className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium transition hover:border-primary/50"
+          >
+            <RefreshCw className="h-4 w-4" /> Làm mới
+          </button>
+        }
+      />
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard icon={AlertTriangle} label="Tổng alert" value={alertStats?.total || 0} color="primary" />
-        <StatCard icon={Bot} label="Nguy hiểm" value={alertStats?.critical || 0} color="danger" />
-        <StatCard icon={ShieldAlert} label="Cảnh báo cao" value={alertStats?.high || 0} color="warning" />
-        <StatCard icon={Globe} label="IP độc hại" value={alertStats?.unique_ips || 0} color="cyber" />
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <StatCard label="Tổng lượt truy cập" value={formatNumber(visitorStats?.totalVisitors ?? visitors.length)} icon={Activity} />
+        <StatCard label="24 giờ qua" value={formatNumber(visitorStats?.last24h ?? 0)} icon={Clock} color="gradient-cyber" delay={0.05} />
+        <StatCard label="Cảnh báo nghiêm trọng" value={formatNumber(visitorStats?.alertCritical ?? 0)} icon={ShieldAlert} color="gradient-danger" delay={0.1} />
+        <StatCard label="IP có cảnh báo" value={formatNumber(visitorStats?.alertUniqueIPs ?? 0)} icon={Globe} color="gradient-success" delay={0.15} />
       </div>
 
       {/* Live bar */}
@@ -166,7 +165,7 @@ export default function VisitorsPage() {
           <div className="absolute inset-0 rounded-full bg-success animate-ping opacity-30" />
           <div className="relative h-3 w-3 rounded-full bg-success" />
         </div>
-        <span className="text-sm font-semibold text-success">Realtime monitoring</span>
+        <span className="text-sm font-semibold text-success">Giám sát trực tiếp</span>
         <span className="text-xs text-muted-foreground ml-auto">
           {visitors.length} visitor • {alerts.length} alert • {geoIPs.length} IP định vị
           {liveCount > 0 && ` • +${liveCount} mới`}
@@ -176,13 +175,13 @@ export default function VisitorsPage() {
       {/* Tabs */}
       <div className="flex gap-2 border-b border-border flex-wrap">
         <Tab active={tab === "alerts"} onClick={() => setTab("alerts")}>
-          <ShieldAlert className="h-4 w-4" /> Security Alerts ({alerts.length})
+          <ShieldAlert className="h-4 w-4" /> Cảnh báo bảo mật ({alerts.length})
         </Tab>
         <Tab active={tab === "logs"} onClick={() => setTab("logs")}>
-          <Activity className="h-4 w-4" /> Live Logs ({visitors.length})
+          <Activity className="h-4 w-4" /> Nhật ký truy cập ({visitors.length})
         </Tab>
         <Tab active={tab === "map"} onClick={() => setTab("map")}>
-          <Globe className="h-4 w-4" /> Bản đồ ({geoIPs.length})
+          <Globe className="h-4 w-4" /> Bản đồ IP ({geoIPs.length})
         </Tab>
       </div>
 
@@ -340,7 +339,7 @@ function AlertCard({ alert, index, onClick }: { alert: Alert; index: number; onC
     medium: { bg: "bg-cyber/10", border: "border-cyber/40", text: "text-cyber", grad: "gradient-cyber" },
     low: { bg: "bg-muted/10", border: "border-border", text: "text-muted-foreground", grad: "gradient-primary" },
   };
-  const c = colors[alert.severity] || colors.low;
+  const c = colors[alert.severity?.toLowerCase()] || colors.low;
   const Icon = icons[alert.threat_type] || AlertTriangle;
 
   return (
@@ -439,20 +438,6 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground w-32 shrink-0">{label}</p>
       <p className={`text-sm flex-1 ${mono ? "font-mono" : ""}`}>{value}</p>
     </div>
-  );
-}
-
-function StatCard({ icon: Icon, label, value, color }: { icon: LucideIcon; label: string; value: string | number; color: string }) {
-  const gradients: Record<string, string> = { primary: "gradient-primary", warning: "gradient-warning", cyber: "gradient-cyber", danger: "gradient-danger", success: "gradient-success" };
-  return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border border-border bg-card p-4">
-      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${gradients[color]} mb-3`}>
-        <Icon className="h-5 w-5 text-white" />
-      </div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-2xl font-bold mt-1">{value}</p>
-    </motion.div>
   );
 }
 

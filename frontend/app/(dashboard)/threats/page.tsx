@@ -39,6 +39,38 @@ const severityColor: Record<string, string> = {
   critical: 'border-danger/30 bg-danger/10 text-danger',
 };
 
+const severityLabels: Record<string, string> = {
+  low: 'Thấp',
+  medium: 'Trung bình',
+  high: 'Cao',
+  critical: 'Nghiêm trọng',
+};
+
+function normalizeSeverity(value?: string) {
+  return (value || 'low').toLowerCase();
+}
+
+function threatLabel(type?: string | null) {
+  if (!type) return 'Không xác định';
+  const labels: Record<string, string> = {
+    sql_injection: 'SQL Injection',
+    xss: 'XSS',
+    path_traversal: 'Path Traversal',
+    command_injection: 'Command Injection',
+    brute_force: 'Brute Force',
+    port_scan: 'Port Scan',
+  };
+  return labels[type] || type.replace(/_/g, ' ');
+}
+
+function locationLabel(ip?: string | null, country?: string | null) {
+  const value = ip || '';
+  if (value === '::1' || value.startsWith('127.') || value.startsWith('10.') || value.startsWith('192.168.') || /^172\.(1[6-9]|2\d|3[01])\./.test(value)) {
+    return 'Nội bộ';
+  }
+  return country || 'Không rõ';
+}
+
 export default function ThreatsPage() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
@@ -111,7 +143,7 @@ export default function ThreatsPage() {
         <StatCard label="Tổng mối đe dọa" value={formatNumber(stats?.total ?? threats.length)} icon={AlertTriangle} />
         <StatCard label="Đã block" value={formatNumber(stats?.blocked ?? threats.filter((item) => item.status === 'blocked').length)} icon={Ban} color="gradient-danger" delay={0.05} />
         <StatCard label="Đang theo dõi" value={formatNumber(stats?.watching ?? threats.filter((item) => item.status === 'watching').length)} icon={Eye} color="gradient-warning" delay={0.1} />
-        <StatCard label="Nguy hiểm" value={formatNumber(stats?.critical ?? threats.filter((item) => item.severity === 'critical').length)} icon={Zap} color="gradient-cyber" delay={0.15} />
+        <StatCard label="Nguy hiểm" value={formatNumber(stats?.critical ?? threats.filter((item) => normalizeSeverity(item.severity) === 'critical').length)} icon={Zap} color="gradient-cyber" delay={0.15} />
       </div>
 
       <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-4">
@@ -156,11 +188,11 @@ export default function ThreatsPage() {
                   <motion.tr key={threat.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: Math.min(index * 0.03, 0.3) }} className="transition hover:bg-accent/30">
                     <td className="px-5 py-4 font-mono text-xs">{threat.ip_address}</td>
                     <td className="px-5 py-4 text-sm">
-                      <span className="flex items-center gap-2"><Globe className="h-3.5 w-3.5 text-muted-foreground" />{threat.country || 'Không rõ'}</span>
+                      <span className="flex items-center gap-2"><Globe className="h-3.5 w-3.5 text-muted-foreground" />{locationLabel(threat.ip_address, threat.country)}</span>
                     </td>
-                    <td className="px-5 py-4 text-sm font-medium capitalize">{(threat.threat_type || 'unknown').replace(/_/g, ' ')}</td>
+                    <td className="px-5 py-4 text-sm font-medium">{threatLabel(threat.threat_type)}</td>
                     <td className="px-5 py-4">
-                      <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase ${severityColor[threat.severity] || 'border-border bg-accent text-muted-foreground'}`}>{threat.severity}</span>
+                      <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase ${severityColor[normalizeSeverity(threat.severity)] || 'border-border bg-accent text-muted-foreground'}`}>{severityLabels[normalizeSeverity(threat.severity)] || threat.severity}</span>
                     </td>
                     <td className="px-5 py-4 font-mono text-sm">{formatNumber(threat.hits)}</td>
                     <td className="px-5 py-4 text-xs text-muted-foreground">{formatDateTime(threat.last_seen)}</td>

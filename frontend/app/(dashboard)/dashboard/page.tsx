@@ -10,6 +10,7 @@ import {
 import { useApiData } from "@/hooks/use-api-data";
 import AISummaryCard from "@/components/dashboard/AISummaryCard";
 import type { AISummary } from "@/lib/ai-summary";
+import { formatNumber } from "@/lib/format";
 import {
   AreaChart, Area, PieChart as RePie, Pie, Cell,
   ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Legend
@@ -58,7 +59,24 @@ const severityColor: Record<string, string> = {
   critical: "bg-danger/10 text-danger border-danger/30",
 };
 
-const PIE_COLORS = ["#10b981", "#f59e0b", "#f97316", "#ef4444"];
+const severityLabels: Record<string, string> = {
+  critical: "Nghiêm trọng",
+  high: "Cao",
+  medium: "Trung bình",
+  low: "Thấp",
+};
+
+const severityOrder = ["critical", "high", "medium", "low"];
+const severityColors: Record<string, string> = {
+  critical: "#ef4444",
+  high: "#f97316",
+  medium: "#f59e0b",
+  low: "#10b981",
+};
+
+function normalizeSeverity(value?: string) {
+  return (value || "low").toLowerCase();
+}
 
 function playAlarmSound(type: "critical" | "warning" = "critical") {
   if (typeof window === "undefined") return;
@@ -188,7 +206,16 @@ export default function DashboardPage() {
     { label: "Vùng canh tác", value: stats?.totalFields ?? 0, icon: MapPin, color: "gradient-primary" },
   ];
 
-  const pieData = bySeverity.map((s) => ({ name: s.severity, value: Number(s.count) }));
+  const pieData = useMemo(() => {
+    const totals = bySeverity.reduce<Record<string, number>>((acc, item) => {
+      const key = normalizeSeverity(item.severity);
+      acc[key] = (acc[key] || 0) + Number(item.count || 0);
+      return acc;
+    }, {});
+    return severityOrder
+      .filter((key) => totals[key] > 0)
+      .map((key) => ({ key, name: severityLabels[key], value: totals[key] }));
+  }, [bySeverity]);
 
   return (
     <div className="space-y-6">
@@ -298,7 +325,7 @@ export default function DashboardPage() {
                   <Icon className="h-5 w-5 text-white" />
                 </div>
               </div>
-              <p className="text-2xl font-bold tracking-tight">{card.value}</p>
+              <p className="text-2xl font-bold tracking-tight">{formatNumber(card.value)}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{card.label}</p>
             </motion.div>
           );
@@ -322,7 +349,7 @@ export default function DashboardPage() {
             </div>
             <span className="rounded-full bg-primary/10 border border-primary/30 px-3 py-1 text-[10px] font-medium text-primary flex items-center gap-1">
               <CircleDot className="h-3 w-3 animate-pulse" />
-              LIVE
+              TRỰC TIẾP
             </span>
           </div>
           <div className="h-64">
@@ -336,7 +363,12 @@ export default function DashboardPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e2a26" />
-                  <XAxis dataKey="date" stroke="#8fa89d" fontSize={11} />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#8fa89d"
+                    fontSize={11}
+                    tickFormatter={(value) => new Date(value).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit" })}
+                  />
                   <YAxis stroke="#8fa89d" fontSize={11} />
                   <Tooltip contentStyle={{ background: "#111a17", border: "1px solid #1e2a26", borderRadius: "12px", fontSize: 12 }} />
                   <Area type="monotone" dataKey="count" stroke="#10b981" strokeWidth={2} fill="url(#colorCount)" />
@@ -365,13 +397,13 @@ export default function DashboardPage() {
             {pieData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <RePie>
-                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                    {pieData.map((_, i) => (
-                      <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
+                    {pieData.map((item) => (
+                      <Cell key={item.key} fill={severityColors[item.key]} />
                     ))}
                   </Pie>
                   <Tooltip contentStyle={{ background: "#111a17", border: "1px solid #1e2a26", borderRadius: "12px", fontSize: 12 }} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} formatter={(value) => <span className="text-muted-foreground">{value}</span>} />
                 </RePie>
               </ResponsiveContainer>
             ) : (
@@ -391,11 +423,11 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold flex items-center gap-2">
               <Activity className="h-4 w-4 text-primary" />
-              Live Log Stream
+              Nhật ký trực tiếp
             </h3>
             <span className="flex items-center gap-1 text-[10px] text-primary font-mono">
               <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-              LIVE
+              TRỰC TIẾP
             </span>
           </div>
           <div className="space-y-2 max-h-96 overflow-y-auto scrollbar-thin font-mono text-xs">
@@ -409,9 +441,9 @@ export default function DashboardPage() {
                   className="flex items-start gap-2 p-2.5 rounded-lg bg-accent/30 border-l-2 border-primary"
                 >
                   <span className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase ${
-                    l.severity === "critical" ? "bg-danger/20 text-danger" :
-                    l.severity === "error" ? "bg-orange-500/20 text-orange-500" :
-                    l.severity === "warning" ? "bg-warning/20 text-warning" :
+                    normalizeSeverity(l.severity) === "critical" ? "bg-danger/20 text-danger" :
+                    normalizeSeverity(l.severity) === "error" ? "bg-orange-500/20 text-orange-500" :
+                    normalizeSeverity(l.severity) === "warning" ? "bg-warning/20 text-warning" :
                     "bg-primary/20 text-primary"
                   }`}>
                     {l.severity}
@@ -469,8 +501,8 @@ export default function DashboardPage() {
                   }`}
                 >
                   <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
-                    a.severity === "critical" ? "gradient-danger" :
-                    a.severity === "high" ? "gradient-warning" : "gradient-primary"
+                    normalizeSeverity(a.severity) === "critical" ? "gradient-danger" :
+                    normalizeSeverity(a.severity) === "high" ? "gradient-warning" : "gradient-primary"
                   }`}>
                     <ShieldAlert className="h-5 w-5 text-white" />
                   </div>
@@ -481,8 +513,8 @@ export default function DashboardPage() {
                       {a.field_name || "Hệ thống"} • {new Date(a.created_at).toLocaleString("vi-VN")}
                     </p>
                   </div>
-                  <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase ${severityColor[a.severity] || ""}`}>
-                    {a.severity}
+                  <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase ${severityColor[normalizeSeverity(a.severity)] || ""}`}>
+                    {severityLabels[normalizeSeverity(a.severity)] || a.severity}
                   </span>
                 </motion.div>
               ))

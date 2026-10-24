@@ -1,10 +1,10 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload, Sparkles, Loader2, CheckCircle2, Leaf, Send, X,
   AlertTriangle, Bug, Lightbulb, Camera, History, MapPin,
-  Info, TrendingUp, BookOpen
+  Info, TrendingUp, BookOpen, LucideIcon
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
@@ -459,17 +459,25 @@ export default function FarmerUploadPage() {
   );
 }
 
-function InfoCard({ icon: Icon, label, value, color, className = "" }: any) {
-  const colorClass = {
+function InfoCard({ icon: Icon, label, value, color, className = "" }: {
+  icon: LucideIcon;
+  label: string;
+  value: ReactNode;
+  color?: string;
+  className?: string;
+}) {
+  const colorClass: Record<string, string> = {
     danger: "text-danger",
     warning: "text-warning",
     success: "text-success",
     primary: "text-primary",
-  }[color] || "text-foreground";
+  };
+  const tone = color ? colorClass[color] : undefined;
+  const resolvedColor = tone || "text-foreground";
 
   return (
     <div className={`rounded-xl border border-border bg-accent/30 p-3 ${className}`}>
-      <div className={`flex items-center gap-1.5 ${colorClass} mb-1`}>
+      <div className={`flex items-center gap-1.5 ${resolvedColor} mb-1`}>
         <Icon className="h-3.5 w-3.5" />
         <p className="text-[10px] font-semibold uppercase tracking-wider">{label}</p>
       </div>

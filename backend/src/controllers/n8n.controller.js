@@ -59,22 +59,54 @@ exports.blockIPFromN8n = async (req, res) => {
   }
 };
 
+const WORKFLOW_ALIASES = {
+  'soc-alert-triage': '%SOC%',
+  'rice-disease-diagnosis': '%Rice%Disease%',
+  'sentinel-2-sync': '%Sentinel%',
+  'daily-security-report': '%Daily%',
+};
+
 exports.saveLogFromN8n = async (req, res) => {
   try {
     const { workflow_id, status, execution_count, message } = req.body;
+    const slug = workflow_id || 'unknown';
+    const logStatus = status || 'success';
+
     await pool.query(
       `INSERT INTO workflow_logs (workflow_id, status, execution_count, message, created_at)
        VALUES ($1, $2, $3, $4, NOW())`,
-      [workflow_id || 'unknown', status || 'success', execution_count || 1, message || '']
+      [slug, logStatus, execution_count || 1, message || '']
     );
-    await pool.query(
-      `UPDATE n8n_workflows
-       SET last_run = NOW(),
-           execution_count = COALESCE($1, execution_count + 1),
-           status = COALESCE($2, status)
-       WHERE workflow_id = $3`,
-      [execution_count || null, status || null, workflow_id || '']
-    );
+
+    const alias = WORKFLOW_ALIASES[slug];
+    if (alias) {
+      const stats = await pool.query(
+        `SELECT COUNT(*)::int AS total,
+                MAX(created_at) AS last_run,
+                ROUND(100.0 * COUNT(*) FILTER (WHERE status NOT IN ('error','failed')) / NULLIF(COUNT(*), 0), 1)::float AS success_rate
+         FROM workflow_logs WHERE workflow_id = $1`,
+        [slug]
+      );
+      const row = stats.rows[0];
+      await pool.query(
+        `UPDATE n8n_workflows
+         SET last_run = $1,
+             execution_count = $2,
+             success_rate = COALESCE($3, success_rate)
+         WHERE name ILIKE $4`,
+        [row.last_run, row.total, row.success_rate, alias]
+      );
+    } else {
+      await pool.query(
+        `UPDATE n8n_workflows
+         SET last_run = NOW(),
+             execution_count = COALESCE($1, execution_count + 1),
+             status = COALESCE($2, status)
+         WHERE workflow_id = $3`,
+        [execution_count || null, logStatus, slug]
+      );
+    }
+
     res.json({ success: true });
   } catch (err) {
     console.error(err);

@@ -4,6 +4,7 @@ const path = require("path");
 const router = express.Router();
 const pool = require("../config/database");
 const { verifyToken } = require("../middlewares/auth.middleware");
+const { requireRole } = require("../middlewares/role.middleware");
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -132,7 +133,7 @@ router.get("/:id", verifyToken, async (req, res) => {
 });
 
 // ============ PUT /api/reports/:id/status ============
-router.put("/:id/status", verifyToken, async (req, res) => {
+router.put("/:id/status", verifyToken, requireRole("admin", "analyst"), async (req, res) => {
   try {
     const { id } = req.params;
     const { status, ai_analysis, ai_severity, ai_disease } = req.body;

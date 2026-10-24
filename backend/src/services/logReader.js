@@ -3,7 +3,7 @@ const readline = require("readline");
 const pool = require("../config/database");
 
 const LOG_DIR = process.env.LOG_DIR || require("path").join(require("os").homedir(), "riceguard", "logs");
-const N8N_BASE = "http://localhost:5678/webhook";
+const N8N_BASE = (process.env.N8N_URL || "http://localhost:5678").replace(/\/+$/, "") + "/webhook";
 
 let currentFile = null;
 let lastPosition = 0;
@@ -131,7 +131,8 @@ async function processLog(log) {
         console.log(`🚨 ALERT #${alert.id}: ${analysis.title}`);
 
         // Gửi n8n webhook (luồng gộp security-event)
-        const url = `${N8N_BASE}/security-event`;
+        const webhookPath = "security-event";
+        const url = `${N8N_BASE}/${webhookPath}`;
 
         try {
           const controller = new AbortController();

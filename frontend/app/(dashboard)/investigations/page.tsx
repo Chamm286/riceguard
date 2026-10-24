@@ -1,105 +1,157 @@
-"use client";
-import { motion } from "framer-motion";
-import { Search, Fingerprint, Clock, CheckCircle } from "lucide-react";
+'use client';
 
-const investigations = [
-  { id: "INV-2026-001", title: "Brute force từ IP 203.113.45.67", status: "investigating", severity: "high", started: "10 phút trước", analyst: "Tống Mỹ Trà", target: "API Gateway" },
-  { id: "INV-2026-002", title: "DDoS vào API Sentinel", status: "investigating", severity: "critical", started: "30 phút trước", analyst: "Trần Anh Tuấn", target: "Sensor API" },
-  { id: "INV-2026-003", title: "Data tampering vùng A1", status: "resolved", severity: "high", started: "1 giờ trước", analyst: "Nguyễn Hữu Thuận", target: "Database" },
-  { id: "INV-2026-004", title: "Phishing email giả admin", status: "resolved", severity: "medium", started: "1 ngày trước", analyst: "Nguyễn Thị Bích Trâm", target: "Email Server" },
-  { id: "INV-2026-005", title: "Ransomware trên server B", status: "resolved", severity: "critical", started: "3 ngày trước", analyst: "Cả nhóm", target: "File Server" },
-  { id: "INV-2026-006", title: "SQL Injection attempt", status: "resolved", severity: "high", started: "4 ngày trước", analyst: "Trần Anh Tuấn", target: "Web App" },
-  { id: "INV-2026-007", title: "Unauthorized SSH access", status: "investigating", severity: "medium", started: "5 ngày trước", analyst: "Tống Mỹ Trà", target: "Linux Server" },
-];
+import { useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
+import {
+  CheckCircle, Clock, Filter, Fingerprint, RefreshCw, Search, Target, User,
+} from 'lucide-react';
+import { useApiData } from '@/hooks/use-api-data';
+import { DataState } from '@/components/common/data-state';
+import { PageHeader } from '@/components/common/page-header';
+import { StatCard } from '@/components/common/stat-card';
+import { formatDateTime, formatNumber } from '@/lib/format';
+
+interface Investigation {
+  id: number;
+  code: string;
+  title: string;
+  description: string;
+  target: string;
+  severity: string;
+  status: string;
+  progress: number;
+  assigned_to: number | null;
+  analyst_name: string | null;
+  alert_title: string | null;
+  started_at: string;
+  resolved_at: string | null;
+  resolution: string | null;
+}
+
+interface InvestigationStats {
+  total: number;
+  investigating: number;
+  resolved: number;
+  critical: number;
+}
 
 const severityColor: Record<string, string> = {
-  low: "bg-success/10 text-success border-success/30",
-  medium: "bg-warning/10 text-warning border-warning/30",
-  high: "bg-orange-500/10 text-orange-500 border-orange-500/30",
-  critical: "bg-danger/10 text-danger border-danger/30",
+  low: 'bg-success/10 text-success border-success/30',
+  medium: 'bg-warning/10 text-warning border-warning/30',
+  high: 'bg-orange-500/10 text-orange-500 border-orange-500/30',
+  critical: 'bg-danger/10 text-danger border-danger/30',
 };
 
 export default function InvestigationsPage() {
-  const stats = {
-    total: investigations.length,
-    investigating: investigations.filter((i) => i.status === "investigating").length,
-    resolved: investigations.filter((i) => i.status === "resolved").length,
-    critical: investigations.filter((i) => i.severity === "critical").length,
-  };
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('all');
+  const [severity, setSeverity] = useState('all');
+  const { data, error, loading, refreshing, refetch } = useApiData<Investigation[]>('/investigations');
+  const statsQuery = useApiData<InvestigationStats>('/investigations/stats');
+
+  const investigations = useMemo(() => data || [], [data]);
+  const stats = statsQuery.data;
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return investigations.filter((item) => {
+      const matchStatus = status === 'all' || item.status === status;
+      const matchSeverity = severity === 'all' || item.severity === severity;
+      const matchSearch =
+        !query ||
+        item.title?.toLowerCase().includes(query) ||
+        item.code?.toLowerCase().includes(query) ||
+        item.target?.toLowerCase().includes(query) ||
+        item.analyst_name?.toLowerCase().includes(query);
+      return matchStatus && matchSeverity && matchSearch;
+    });
+  }, [investigations, search, status, severity]);
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-border bg-card p-5">
-          <p className="text-3xl font-bold text-gradient">{stats.total}</p>
-          <p className="text-xs text-muted-foreground mt-1">Tổng điều tra</p>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="rounded-2xl border border-border bg-card p-5">
-          <p className="text-3xl font-bold text-warning">{stats.investigating}</p>
-          <p className="text-xs text-muted-foreground mt-1">Đang điều tra</p>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="rounded-2xl border border-border bg-card p-5">
-          <p className="text-3xl font-bold text-success">{stats.resolved}</p>
-          <p className="text-xs text-muted-foreground mt-1">Đã xử lý</p>
-        </motion.div>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="rounded-2xl border border-border bg-card p-5">
-          <p className="text-3xl font-bold text-danger">{stats.critical}</p>
-          <p className="text-xs text-muted-foreground mt-1">Critical</p>
-        </motion.div>
+      <PageHeader
+        title="Điều tra sự cố"
+        description="Theo dõi tiến độ điều tra và phân công analyst"
+        action={
+          <button onClick={() => { refetch(); statsQuery.refetch(); }} className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium hover:border-primary/50 transition">
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Làm mới
+          </button>
+        }
+      />
+
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <StatCard label="Tổng điều tra" value={formatNumber(stats?.total ?? investigations.length)} icon={Fingerprint} />
+        <StatCard label="Đang điều tra" value={formatNumber(stats?.investigating ?? investigations.filter((item) => item.status === 'investigating').length)} icon={Clock} color="gradient-warning" delay={0.05} />
+        <StatCard label="Đã xử lý" value={formatNumber(stats?.resolved ?? investigations.filter((item) => item.status === 'resolved').length)} icon={CheckCircle} color="gradient-success" delay={0.1} />
+        <StatCard label="Critical" value={formatNumber(stats?.critical ?? investigations.filter((item) => item.severity === 'critical').length)} icon={Target} color="gradient-danger" delay={0.15} />
       </div>
 
-      <div className="rounded-2xl border border-border bg-card p-4 flex flex-wrap gap-3">
-        <div className="flex-1 min-w-64 flex items-center gap-2 rounded-xl border border-border bg-input px-3.5 py-2.5">
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <input placeholder="Tìm kiếm điều tra..." className="flex-1 bg-transparent text-sm outline-none" />
+      <div className="rounded-2xl border border-border bg-card p-4">
+        <div className="flex flex-wrap gap-3">
+          <div className="flex min-w-64 flex-1 items-center gap-2 rounded-xl border border-border bg-input px-3.5 py-2.5">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Tìm mã, tiêu đề, target, analyst..." className="flex-1 bg-transparent text-sm outline-none" />
+          </div>
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-input px-3.5">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <select value={status} onChange={(event) => setStatus(event.target.value)} className="h-11 bg-transparent text-sm outline-none">
+              <option value="all">Tất cả trạng thái</option>
+              <option value="investigating">Đang điều tra</option>
+              <option value="resolved">Đã xử lý</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-input px-3.5">
+            <select value={severity} onChange={(event) => setSeverity(event.target.value)} className="h-11 bg-transparent text-sm outline-none">
+              <option value="all">Tất cả mức độ</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+          <span className="flex items-center rounded-xl bg-accent px-3 text-xs text-muted-foreground">{filtered.length} kết quả</span>
         </div>
-        <select className="h-11 rounded-xl border border-border bg-input px-3.5 text-sm outline-none">
-          <option>Tất cả trạng thái</option>
-          <option>Đang điều tra</option>
-          <option>Đã xử lý</option>
-        </select>
       </div>
 
-      <div className="space-y-3">
-        {investigations.map((inv, i) => (
-          <motion.div
-            key={inv.id}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className="hover-lift rounded-2xl border border-border bg-card p-5 flex items-center gap-4"
-          >
-            <div className={`flex h-12 w-12 items-center justify-center rounded-xl shrink-0 ${inv.status === "investigating" ? "gradient-warning" : "gradient-primary"}`}>
-              <Fingerprint className="h-6 w-6 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="font-mono text-xs text-muted-foreground">{inv.id}</span>
-                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${severityColor[inv.severity]}`}>
-                  {inv.severity}
-                </span>
+      <DataState loading={loading} error={error} empty={!loading && !error && filtered.length === 0} emptyText="Không có điều tra phù hợp" onRetry={refetch}>
+        <div className="space-y-3">
+          {filtered.map((investigation, index) => (
+            <motion.div
+              key={investigation.id}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: Math.min(index * 0.03, 0.3) }}
+              className="hover-lift flex flex-wrap items-center gap-4 rounded-2xl border border-border bg-card p-5"
+            >
+              <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${investigation.status === 'investigating' ? 'gradient-warning' : 'gradient-success'}`}>
+                <Fingerprint className="h-6 w-6 text-white" />
               </div>
-              <p className="font-medium truncate">{inv.title}</p>
-              <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{inv.started}</span>
-                <span>👤 {inv.analyst}</span>
-                <span>🎯 {inv.target}</span>
+              <div className="min-w-64 flex-1">
+                <div className="mb-1 flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-xs text-muted-foreground">{investigation.code}</span>
+                  <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${severityColor[investigation.severity] || severityColor.medium}`}>{investigation.severity}</span>
+                  <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] capitalize text-muted-foreground">{investigation.status}</span>
+                </div>
+                <p className="font-medium">{investigation.title}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{formatDateTime(investigation.started_at)}</span>
+                  <span className="flex items-center gap-1"><User className="h-3 w-3" />{investigation.analyst_name || 'Chưa phân công'}</span>
+                  <span className="flex items-center gap-1"><Target className="h-3 w-3" />{investigation.target || '—'}</span>
+                </div>
+                <div className="mt-3 flex items-center gap-3">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-accent">
+                    <div className={`h-full ${investigation.progress >= 100 ? 'gradient-success' : 'gradient-warning'}`} style={{ width: `${Math.min(100, Number(investigation.progress) || 0)}%` }} />
+                  </div>
+                  <span className="w-8 text-right text-[10px] text-muted-foreground">{Number(investigation.progress) || 0}%</span>
+                </div>
               </div>
-            </div>
-            {inv.status === "resolved" ? (
-              <span className="flex items-center gap-1.5 rounded-full bg-success/10 border border-success/30 px-3 py-1 text-xs font-medium text-success whitespace-nowrap">
-                <CheckCircle className="h-3 w-3" />
-                Đã xử lý
+              <span className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${investigation.status === 'resolved' ? 'border-success/30 bg-success/10 text-success' : 'border-warning/30 bg-warning/10 text-warning'}`}>
+                {investigation.status === 'resolved' ? <CheckCircle className="h-3 w-3" /> : <Search className="h-3 w-3" />}
+                {investigation.status === 'resolved' ? 'Đã xử lý' : 'Đang điều tra'}
               </span>
-            ) : (
-              <span className="flex items-center gap-1.5 rounded-full bg-warning/10 border border-warning/30 px-3 py-1 text-xs font-medium text-warning whitespace-nowrap">
-                <Search className="h-3 w-3" />
-                Đang điều tra
-              </span>
-            )}
-          </motion.div>
-        ))}
-      </div>
+            </motion.div>
+          ))}
+        </div>
+      </DataState>
     </div>
   );
 }

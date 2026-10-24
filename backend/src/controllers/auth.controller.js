@@ -114,15 +114,72 @@ exports.login = async (req, res) => {
 exports.me = async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, username, email, full_name, role, telegram_chat_id FROM users WHERE id = $1',
+      'SELECT id, username, email, full_name, role, telegram_chat_id, last_login, created_at FROM users WHERE id = $1',
       [req.user.id]
     );
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy user' });
     }
-    res.json({ success: true, user: result.rows[0] });
+    res.json({ success: true, user: result.rows[0], data: result.rows[0] });
   } catch (err) {
     console.error(err);
+    res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
+// Cập nhật hồ sơ cá nhân
+exports.updateMe = async (req, res) => {
+  try {
+    const { full_name, email, telegram_chat_id } = req.body;
+    if (!full_name || !email) {
+      return res.status(400).json({ success: false, message: 'Thiếu họ tên hoặc email' });
+    }
+
+    const duplicate = await pool.query(
+      'SELECT id FROM users WHERE email = $1 AND id <> $2',
+      [email, req.user.id]
+    );
+    if (duplicate.rows.length > 0) {
+      return res.status(409).json({ success: false, message: 'Email đã được sử dụng' });
+    }
+
+    const result = await pool.query(
+      `UPDATE users
+       SET full_name = $1, email = $2, telegram_chat_id = $3
+       WHERE id = $4
+       RETURNING id, username, email, full_name, role, telegram_chat_id`,
+      [full_name, email, telegram_chat_id || null, req.user.id]
+    );
+
+    res.json({ success: true, message: 'Đã cập nhật hồ sơ', user: result.rows[0], data: result.rows[0] });
+  } catch (err) {
+    console.error('updateMe error:', err);
+    res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+};
+
+// Đổi mật khẩu
+exports.changePassword = async (req, res) => {
+  try {
+    const { current_password, new_password } = req.body;
+    if (!current_password || !new_password) {
+      return res.status(400).json({ success: false, message: 'Thiếu mật khẩu hiện tại hoặc mật khẩu mới' });
+    }
+    if (String(new_password).length < 6) {
+      return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự' });
+    }
+
+    const result = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
+    if (!result.rows.length) return res.status(404).json({ success: false, message: 'Không tìm thấy user' });
+
+    const valid = await bcrypt.compare(current_password, result.rows[0].password_hash);
+    if (!valid) return res.status(400).json({ success: false, message: 'Mật khẩu hiện tại không đúng' });
+
+    const hash = await bcrypt.hash(new_password, 10);
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, req.user.id]);
+    res.json({ success: true, message: 'Đã đổi mật khẩu' });
+  } catch (err) {
+    console.error('changePassword error:', err);
     res.status(500).json({ success: false, message: 'Lỗi server' });
   }
 };

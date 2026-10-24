@@ -20,5 +20,8 @@ router.post('/', verifyToken, requireRole('admin', 'analyst'), alertController.c
 router.get('/', verifyToken, requireRole('admin', 'analyst'), alertController.getAll);
 router.get('/:id', verifyToken, requireRole('admin', 'analyst'), alertController.getById);
 router.put('/:id/status', verifyToken, requireRole('admin', 'analyst'), alertController.updateStatus);
+router.put('/:id/assign', verifyToken, requireRole('admin', 'analyst'), alertController.assign);
+router.post('/:id/block-ip', verifyToken, requireRole('admin', 'analyst'), alertController.blockIp);
+router.post('/:id/notify', verifyToken, requireRole('admin', 'analyst'), alertController.notify);
 
 module.exports = router;

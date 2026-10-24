@@ -83,7 +83,7 @@ export default function VisitorMap({ geoIPs }: { geoIPs: GeoIP[] }) {
       }
       tileLayerRef.current = L.tileLayer(currentTile.url, {
         attribution: currentTile.attribution,
-        subdomains: currentTile.subdomains || "abc",
+        subdomains: (currentTile as any).subdomains || "abc",
         maxZoom: currentTile.maxZoom,
       }).addTo(mapInstanceRef.current);
 

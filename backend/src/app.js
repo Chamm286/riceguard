@@ -53,6 +53,7 @@ app.use('/api/settings', require('./routes/settings.routes'));
 app.use('/api/audit', require('./routes/audit.routes'));
 app.use('/api/satellite', require('./routes/satellite.routes'));
 app.use('/api/firewall', require('./routes/firewall.routes'));
+app.use('/api/system', require('./routes/system.routes'));
 app.use('/api/plots', require('./routes/plots.routes'));
 app.use('/api/seasons', require('./routes/seasons.routes'));
 

@@ -78,7 +78,7 @@
         "id": "n2",
         "name": "🔧 Normalize Data",
         "type": "n8n-nodes-base.set",
-        "typeVersion": 3,
+        "typeVersion": 3.4,
         "position": [
           -120,
           0
@@ -160,7 +160,9 @@
         "parameters": {
           "operation": "executeQuery",
           "query": "SELECT COUNT(*)::int AS n FROM alerts WHERE ip_address=$1 AND created_at > NOW() - INTERVAL '1 hour'",
-          "queryReplacement": "={{ [$('🧠 Detect Attack').first().json.ip] }}"
+          "options": {
+            "queryReplacement": "={{ [$('🧠 Detect Attack').first().json.ip] }}"
+          }
         },
         "id": "n6",
         "name": "🗄️ Count 1h",
@@ -232,7 +234,10 @@
       {
         "parameters": {
           "chatId": "7893336271",
-          "text": "=🚨 {{ $('🧠 Detect Attack').first().json.attack_type }} từ {{ $('🧠 Detect Attack').first().json.ip }}\\nSố lần 1h: {{ $('🗄️ Count 1h').first().json.n }}"
+          "text": "=🚨 {{ $('🧠 Detect Attack').first().json.attack_type }} từ {{ $('🧠 Detect Attack').first().json.ip }}\\nSố lần 1h: {{ $('🗄️ Count 1h').first().json.n }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
         },
         "id": "n10",
         "name": "🔔 Notify Telegram",
@@ -277,7 +282,10 @@
       {
         "parameters": {
           "chatId": "7893336271",
-          "text": "=❌ Lỗi SOC Alert Triage: {{ $json.message }}"
+          "text": "=❌ Lỗi SOC Alert Triage: {{ $json.message }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
         },
         "id": "n13",
         "name": "❌ Error Handler",
@@ -508,7 +516,7 @@
         "id": "n2",
         "name": "🔧 Normalize Data",
         "type": "n8n-nodes-base.set",
-        "typeVersion": 3,
+        "typeVersion": 3.4,
         "position": [
           -120,
           0
@@ -597,7 +605,9 @@
         "parameters": {
           "operation": "executeQuery",
           "query": "UPDATE reports SET ai_disease=$1, ai_severity=$2, status='reviewing' WHERE id=$3",
-          "queryReplacement": "={{ [$('🧠 Parse AI').first().json.disease,$('🧠 Parse AI').first().json.severity,$('🧠 Parse AI').first().json.report_id] }}"
+          "options": {
+            "queryReplacement": "={{ [$('🧠 Parse AI').first().json.disease,$('🧠 Parse AI').first().json.severity,$('🧠 Parse AI').first().json.report_id] }}"
+          }
         },
         "id": "n7",
         "name": "🗄️ Update Report",
@@ -612,7 +622,9 @@
         "parameters": {
           "operation": "executeQuery",
           "query": "SELECT telegram_chat_id, full_name FROM users WHERE id=$1",
-          "queryReplacement": "={{ [$('🧠 Parse AI').first().json.user_id] }}"
+          "options": {
+            "queryReplacement": "={{ [$('🧠 Parse AI').first().json.user_id] }}"
+          }
         },
         "id": "n8",
         "name": "🗄️ Query Farmer",
@@ -652,7 +664,10 @@
       {
         "parameters": {
           "chatId": "={{ $('🗄️ Query Farmer').first().json.telegram_chat_id || '7893336271' }}",
-          "text": "=🌾 Báo cáo #{{ $('🧠 Parse AI').first().json.report_id }}\\nBệnh: {{ $('🧠 Parse AI').first().json.disease }}\\nMức độ: {{ $('🧠 Parse AI').first().json.severity }}"
+          "text": "=🌾 Báo cáo #{{ $('🧠 Parse AI').first().json.report_id }}\\nBệnh: {{ $('🧠 Parse AI').first().json.disease }}\\nMức độ: {{ $('🧠 Parse AI').first().json.severity }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
         },
         "id": "n10",
         "name": "🔔 Notify Farmer",
@@ -697,7 +712,10 @@
       {
         "parameters": {
           "chatId": "7893336271",
-          "text": "=❌ Lỗi Rice Diagnosis: {{ $json.message }}"
+          "text": "=❌ Lỗi Rice Diagnosis: {{ $json.message }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
         },
         "id": "n13",
         "name": "❌ Error Handler",
@@ -966,7 +984,9 @@
         "parameters": {
           "operation": "executeQuery",
           "query": "INSERT INTO features (field_id,window_start,window_end,ndvi_avg,ndre_avg,created_at) VALUES (1,NOW()-INTERVAL '1 day',NOW(),$1,$2,NOW()) RETURNING id;",
-          "queryReplacement": "={{ [$('🧠 Parse Result').first().json.ndvi,$('🧠 Parse Result').first().json.ndre] }}"
+          "options": {
+            "queryReplacement": "={{ [$('🧠 Parse Result').first().json.ndvi,$('🧠 Parse Result').first().json.ndre] }}"
+          }
         },
         "id": "n5",
         "name": "🗄️ Save Feature",
@@ -981,7 +1001,9 @@
         "parameters": {
           "operation": "executeQuery",
           "query": "INSERT INTO model_predictions (feature_id,model_name,prediction,confidence) VALUES ($1,'sentinel-rf',$2,$3) RETURNING id;",
-          "queryReplacement": "={{ [$('🗄️ Save Feature').first().json.id,$('🧠 Parse Result').first().json.disease,$('🧠 Parse Result').first().json.confidence] }}"
+          "options": {
+            "queryReplacement": "={{ [$('🗄️ Save Feature').first().json.id,$('🧠 Parse Result').first().json.disease,$('🧠 Parse Result').first().json.confidence] }}"
+          }
         },
         "id": "n6",
         "name": "🗄️ Save Prediction",
@@ -996,7 +1018,9 @@
         "parameters": {
           "operation": "executeQuery",
           "query": "UPDATE fields SET status=$1, updated_at=NOW() WHERE id=1",
-          "queryReplacement": "={{ [$('🧠 Parse Result').first().json.status] }}"
+          "options": {
+            "queryReplacement": "={{ [$('🧠 Parse Result').first().json.status] }}"
+          }
         },
         "id": "n7",
         "name": "🗄️ Update Field",
@@ -1036,7 +1060,10 @@
       {
         "parameters": {
           "chatId": "7893336271",
-          "text": "=⚠️ NDVI thấp: {{ $('🧠 Parse Result').first().json.ndvi }} - {{ $('🧠 Parse Result').first().json.disease }}"
+          "text": "=⚠️ NDVI thấp: {{ $('🧠 Parse Result').first().json.ndvi }} - {{ $('🧠 Parse Result').first().json.disease }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
         },
         "id": "n9",
         "name": "🔔 Notify Alert",
@@ -1050,7 +1077,10 @@
       {
         "parameters": {
           "chatId": "7893336271",
-          "text": "=✅ Sentinel-2 sync OK: NDVI={{ $('🧠 Parse Result').first().json.ndvi }}"
+          "text": "=✅ Sentinel-2 sync OK: NDVI={{ $('🧠 Parse Result').first().json.ndvi }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
         },
         "id": "n10",
         "name": "🔔 Notify OK",
@@ -1095,7 +1125,10 @@
       {
         "parameters": {
           "chatId": "7893336271",
-          "text": "=❌ Lỗi Sentinel Sync: {{ $json.message }}"
+          "text": "=❌ Lỗi Sentinel Sync: {{ $json.message }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
         },
         "id": "n13",
         "name": "❌ Error Handler",
@@ -1326,8 +1359,7 @@
       },
       {
         "parameters": {
-          "mode": "combine",
-          "combineBy": "combineAll"
+          "mode": "append"
         },
         "id": "n4",
         "name": "🔀 Merge",
@@ -1370,7 +1402,10 @@
       {
         "parameters": {
           "chatId": "7893336271",
-          "text": "={{ $json.msg }}"
+          "text": "={{ $json.msg }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
         },
         "id": "n6",
         "name": "🔔 Notify Telegram",
@@ -1386,9 +1421,9 @@
           "resource": "message",
           "operation": "send",
           "subject": "RiceGuard Daily Security Report",
-          "to": "admin@example.com",
           "message": "={{ $json.msg }}",
-          "options": {}
+          "options": {},
+          "sendTo": "admin@example.com"
         },
         "id": "n7",
         "name": "📧 Send Gmail",
@@ -1403,7 +1438,9 @@
         "parameters": {
           "operation": "executeQuery",
           "query": "INSERT INTO alerts_summary (time_window,summary,alert_count,created_at) VALUES ('24h',$1,$2,NOW())",
-          "queryReplacement": "={{ [$('🧠 Format Report').first().json.msg,$('🗄️ Stats 24h').first().json.total] }}"
+          "options": {
+            "queryReplacement": "={{ [$('🧠 Format Report').first().json.msg,$('🗄️ Stats 24h').first().json.total] }}"
+          }
         },
         "id": "n8",
         "name": "🗄️ Save Summary",
@@ -1464,7 +1501,10 @@
       {
         "parameters": {
           "chatId": "7893336271",
-          "text": "=❌ Lỗi Daily Report: {{ $json.message }}"
+          "text": "=❌ Lỗi Daily Report: {{ $json.message }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
         },
         "id": "n11",
         "name": "❌ Error Handler",

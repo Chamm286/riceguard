@@ -1,24 +1,10 @@
 "use client";
 import { motion } from "framer-motion";
 import { Sparkles, Target, TrendingUp, AlertTriangle, Lightbulb } from "lucide-react";
+import type { AISummary } from "@/lib/ai-summary";
 
 interface AISummaryCardProps {
-  data: {
-    summary: string;
-    top_threat: {
-      ip: string;
-      type: string;
-      severity: string;
-      description: string;
-    };
-    affected_targets: string[];
-    recommendation: string;
-    risk_level: string;
-    alert_count: number;
-    threats_count: number;
-    investigations_count: number;
-    created_at: string;
-  };
+  data: AISummary;
 }
 
 const riskColors: Record<string, string> = {

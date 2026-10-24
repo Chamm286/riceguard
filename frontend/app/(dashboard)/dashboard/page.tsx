@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import api from "@/lib/api";
 import AISummaryCard from "@/components/dashboard/AISummaryCard";
+import type { AISummary } from "@/lib/ai-summary";
 import {
   AreaChart, Area, PieChart as RePie, Pie, Cell,
   ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, Legend
@@ -23,6 +24,33 @@ interface Stats {
   totalFields: number;
 }
 
+interface RecentAlert {
+  id: number;
+  title: string;
+  severity: string;
+  created_at: string;
+  field_name?: string | null;
+}
+
+interface TimelinePoint {
+  date: string;
+  count: number | string;
+}
+
+interface SeverityPoint {
+  severity: string;
+  count: number | string;
+}
+
+interface LiveLog {
+  id: number;
+  severity: string;
+  message: string;
+  ip_address?: string | null;
+  source?: string;
+  created_at: string;
+}
+
 const severityColor: Record<string, string> = {
   low: "bg-success/10 text-success border-success/30",
   medium: "bg-warning/10 text-warning border-warning/30",
@@ -35,9 +63,9 @@ const PIE_COLORS = ["#10b981", "#f59e0b", "#f97316", "#ef4444"];
 function playAlarmSound(type: "critical" | "warning" = "critical") {
   if (typeof window === "undefined") return;
   try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContext) return;
-    const ctx = new AudioContext();
+    const AudioCtx = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
 
     const beep = (startTime: number, freq: number, duration: number, waveType: OscillatorType = "sawtooth") => {
       const osc = ctx.createOscillator();
@@ -64,22 +92,23 @@ function playAlarmSound(type: "critical" | "warning" = "critical") {
     }
 
     setTimeout(() => ctx.close().catch(() => {}), 2000);
-  } catch (e) {}
+  } catch {}
 }
 
 export default function DashboardPage() {
   const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
-  const [recentAlerts, setRecentAlerts] = useState<any[]>([]);
-  const [timeline, setTimeline] = useState<any[]>([]);
-  const [bySeverity, setBySeverity] = useState<any[]>([]);
-  const [liveLogs, setLiveLogs] = useState<any[]>([]);
+  const [recentAlerts, setRecentAlerts] = useState<RecentAlert[]>([]);
+  const [timeline, setTimeline] = useState<TimelinePoint[]>([]);
+  const [bySeverity, setBySeverity] = useState<SeverityPoint[]>([]);
+  const [liveLogs, setLiveLogs] = useState<LiveLog[]>([]);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [newAlertFlash, setNewAlertFlash] = useState<any>(null);
+  const [newAlertFlash, setNewAlertFlash] = useState<RecentAlert | null>(null);
   const [refreshCountdown, setRefreshCountdown] = useState(3);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [aiSummary, setAiSummary] = useState<any>(null);
+  const [backendOnline, setBackendOnline] = useState(false);
+  const [aiSummary, setAiSummary] = useState<AISummary | null>(null);
   const lastAlertIdRef = useRef<number>(0);
   const isFirstLoadRef = useRef<boolean>(true);
 
@@ -102,6 +131,7 @@ export default function DashboardPage() {
           api.get("/logs", { params: { limit: 6 } }).catch(() => null),
         ]);
 
+        setBackendOnline(Boolean(statsRes || alertsRes || timelineRes || severityRes || logsRes));
         if (statsRes?.data?.data) setStats(statsRes.data.data);
         if (timelineRes?.data?.data) setTimeline(timelineRes.data.data);
         if (severityRes?.data?.data) setBySeverity(severityRes.data.data);
@@ -140,7 +170,7 @@ export default function DashboardPage() {
                   icon: "/favicon.ico",
                   tag: `alert-${latestAlert.id}`,
                 });
-              } catch (e) {}
+              } catch {}
             }
 
             setNewAlertFlash(latestAlert);
@@ -179,12 +209,12 @@ export default function DashboardPage() {
   };
 
   const cards = [
-    { label: "Tổng cảnh báo", value: stats?.totalAlerts ?? 0, icon: ShieldAlert, color: "gradient-primary", trend: "+12%" },
-    { label: "Cảnh báo mới", value: stats?.newAlerts ?? 0, icon: AlertTriangle, color: "gradient-warning", trend: "+8%" },
-    { label: "Nguy hiểm", value: stats?.criticalAlerts ?? 0, icon: Zap, color: "gradient-danger", trend: "+3%" },
-    { label: "Đã xử lý", value: stats?.resolvedAlerts ?? 0, icon: CheckCircle, color: "gradient-success", trend: "+24%" },
-    { label: "Nhật ký", value: stats?.totalLogs ?? 0, icon: FileText, color: "gradient-cyber", trend: "+18%" },
-    { label: "Vùng canh tác", value: stats?.totalFields ?? 0, icon: MapPin, color: "gradient-primary", trend: "0%" },
+    { label: "Tổng cảnh báo", value: stats?.totalAlerts ?? 0, icon: ShieldAlert, color: "gradient-primary" },
+    { label: "Cảnh báo mới", value: stats?.newAlerts ?? 0, icon: AlertTriangle, color: "gradient-warning" },
+    { label: "Nguy hiểm", value: stats?.criticalAlerts ?? 0, icon: Zap, color: "gradient-danger" },
+    { label: "Đã xử lý", value: stats?.resolvedAlerts ?? 0, icon: CheckCircle, color: "gradient-success" },
+    { label: "Nhật ký", value: stats?.totalLogs ?? 0, icon: FileText, color: "gradient-cyber" },
+    { label: "Vùng canh tác", value: stats?.totalFields ?? 0, icon: MapPin, color: "gradient-primary" },
   ];
 
   const pieData = bySeverity.map((s) => ({ name: s.severity, value: Number(s.count) }));
@@ -241,14 +271,14 @@ export default function DashboardPage() {
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
           </span>
-          <span className="text-sm font-semibold">Hệ thống đang hoạt động</span>
+          <span className="text-sm font-semibold">{backendOnline ? "Hệ thống đang hoạt động" : "Mất kết nối backend"}</span>
         </div>
 
         <div className="h-4 w-px bg-border" />
 
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Server className="h-3.5 w-3.5 text-primary" />
-          <span>Backend: <span className="text-success font-mono">ONLINE</span></span>
+          <span>Backend: <span className={backendOnline ? "text-success font-mono" : "text-danger font-mono"}>{backendOnline ? "ONLINE" : "OFFLINE"}</span></span>
         </div>
 
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -292,13 +322,10 @@ export default function DashboardPage() {
               transition={{ delay: i * 0.05 }}
               className="hover-lift rounded-2xl border border-border bg-card p-4 group"
             >
-              <div className="flex items-start justify-between mb-3">
+              <div className="mb-3 flex items-start justify-between">
                 <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${card.color} group-hover:scale-110 transition`}>
                   <Icon className="h-5 w-5 text-white" />
                 </div>
-                <span className="rounded-full bg-success/10 text-success border border-success/30 px-2 py-0.5 text-[10px] font-semibold">
-                  {card.trend}
-                </span>
               </div>
               <p className="text-2xl font-bold tracking-tight">{card.value}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{card.label}</p>

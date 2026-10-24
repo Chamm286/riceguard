@@ -5,6 +5,10 @@ import numpy as np
 
 app = Flask(__name__)
 
+@app.route('/api/health', methods=['GET'])
+def health():
+    return jsonify({'status': 'ok', 'service': 'riceguard-ai', 'timestamp': __import__('datetime').datetime.utcnow().isoformat() + 'Z'})
+
 @app.route('/api/analyze-rice', methods=['POST'])
 def analyze_rice():
     data = request.get_json(force=True)

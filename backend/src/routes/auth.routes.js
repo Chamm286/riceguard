@@ -6,5 +6,7 @@ const { requireRole } = require('../middlewares/role.middleware');
 
 router.post('/login', authController.login);
 router.get('/me', verifyToken, authController.me);
+router.put('/me', verifyToken, authController.updateMe);
+router.put('/password', verifyToken, authController.changePassword);
 
 module.exports = router;

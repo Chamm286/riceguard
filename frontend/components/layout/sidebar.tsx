@@ -6,12 +6,25 @@ import {
   LayoutDashboard, ShieldAlert, FileText, MapPin, Settings,
   Shield, LogOut, Fingerprint, FileBarChart, Home, Leaf,
   Cloud, BookOpen, Bell, Users, Activity, ScrollText, Bug,
-  FlaskConical, Target, BarChart3, Server
+  FlaskConical, Target, BarChart3, Server, LucideIcon
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
-const menuSections = [
+interface MenuItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  badge?: string;
+}
+
+interface MenuSection {
+  title: string;
+  roles: string[];
+  items: MenuItem[];
+}
+
+const menuSections: MenuSection[] = [
   {
     title: "🌾 Nông dân",
     roles: ["farmer"],
@@ -136,7 +149,7 @@ export function Sidebar() {
                         "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold",
                         isActive ? "bg-white/25 text-white" : "bg-danger text-white animate-pulse"
                       )}>
-                        {typeof item.badge === "number" ? item.badge : (badges[item.badge] || 0)}
+                        {badges[item.badge] || 0}
                       </span>
                     )}
                   </Link>

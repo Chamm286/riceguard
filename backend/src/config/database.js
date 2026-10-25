@@ -1,12 +1,12 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
+if (!process.env.DATABASE_URL) {
+  throw new Error('Thiếu DATABASE_URL trong file .env');
+}
+
 const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
+  connectionString: process.env.DATABASE_URL,
 });
 
 pool.on('connect', () => {
@@ -14,7 +14,7 @@ pool.on('connect', () => {
 });
 
 pool.on('error', (err) => {
-  console.error('❌ Lỗi PostgreSQL:', err);
+  console.error('❌ Lỗi PostgreSQL:', err.message);
 });
 
 module.exports = pool;

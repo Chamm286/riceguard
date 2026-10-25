@@ -1,0 +1,222 @@
+{
+  "name": "D6 - Farmer Support",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "farmer-support",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "82443188-f2fa-4cd3-bbab-45be1a47b3c8",
+      "name": "Webhook",
+      "webhookId": "2062e383-0464-48e5-9a52-3f3083662981"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "25b3bc6d-e480-4f89-9596-b37e625bf98f",
+              "leftValue": "={{ $json.body.message }} ",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        0
+      ],
+      "id": "b535a237-a0d0-4fcc-bcc0-7b5ada9931bb",
+      "name": "Validate"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, full_name, email, role FROM users \nWHERE id = $1 AND role = 'farmer'",
+        "options": {
+          "queryReplacement": "={{ $json.body.farmer_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        448,
+        -96
+      ],
+      "id": "203128b2-98b7-4b65-91ff-6d57d249435a",
+      "name": "Check farmer",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "TDjlfcrzYSZKgZWp",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "58a6d05e-db92-44ed-970c-4d506a3d5422",
+              "leftValue": "={{ $json.id }}{{ $('Validate').item.json.body.farmer_id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        -96
+      ],
+      "id": "2494a200-8de0-4a37-84f4-f595102b6d90",
+      "name": "Valid Famer"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO support_messages \n  (farmer_id, conversation_id, sender_role, message, status)\nVALUES \n  ($1, $2, 'farmer', $3, 'open')\nRETURNING id, created_at",
+        "options": {
+          "queryReplacement": "={{ $('Webhook').first().json.body.farmer_id }}\n{{ $('Webhook').first().json.body.conversation_id || 'conv-' + Date.now() }}\n{{ $('Webhook').first().json.body.message }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        896,
+        -192
+      ],
+      "id": "9febeebd-663a-4241-8773-cb57da28bbd2",
+      "name": "Save Message",
+      "credentials": {
+        "postgres": {
+          "id": "TDjlfcrzYSZKgZWp",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== 1. LẤY DỮ LIỆU TỪ WEBHOOK =====\nconst body = $('Webhook').first().json.body;\nconst msg = (body.message || '').toLowerCase();\nconst messageId = $input.first().json.id;\n\n// ===== 2. DANH SÁCH TỪ KHÓA FAQ =====\nconst faqKeywords = [\n  'vàng lá', 'đạo ôn', 'đốm nâu', 'phân bón', 'tưới nước',\n  'sâu', 'rầy', 'bệnh', 'thuốc', 'bón', 'nước', 'lúa',\n  'nấm', 'khô', 'héo', 'vàng', 'xanh', 'đốm', 'cháy',\n  'thời tiết', 'mưa', 'nắng', 'hạn', 'ngập'\n];\n\n// ===== 3. KIỂM TRA SPAM =====\nconst isSpam = msg.length < 5;\n\n// ===== 4. KIỂM TRA KHẨN CẤP =====\nconst urgentKeywords = ['khẩn cấp', 'gấp', 'ngay', 'hỏa tốc', 'cứu'];\nconst isUrgent = urgentKeywords.some(k => msg.includes(k));\n\n// ===== 5. KIỂM TRA KHỚP FAQ =====\nconst matchedFaq = faqKeywords.filter(k => msg.includes(k));\n\n// ===== 6. QUYẾT ĐỊNH CẦN ADMIN HAY KHÔNG =====\nlet needsAdmin;\nlet reason;\n\nif (isSpam) {\n  needsAdmin = false;\n  reason = 'Spam - quá ngắn';\n} else if (isUrgent) {\n  needsAdmin = true;\n  reason = 'Khẩn cấp - cần admin xử lý ngay';\n} else if (matchedFaq.length === 0) {\n  needsAdmin = true;\n  reason = 'Không khớp FAQ';\n} else {\n  needsAdmin = false;\n  reason = `Khớp FAQ: ${matchedFaq.join(', ')}`;\n}\n\n// ===== 7. TRẢ VỀ KẾT QUẢ =====\nreturn [{\n  json: {\n    message_id: messageId,\n    farmer_id: body.farmer_id,\n    conversation_id: body.conversation_id || 'conv-auto',\n    message: body.message,\n    needs_admin: needsAdmin,\n    classify_reason: reason,\n    matched_keywords: matchedFaq,\n    is_urgent: isUrgent,\n    is_spam: isSpam\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -192
+      ],
+      "id": "b9de3f35-d363-4859-8536-7df07650066d",
+      "name": "Classify"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate": {
+      "main": [
+        [
+          {
+            "node": "Check farmer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check farmer": {
+      "main": [
+        [
+          {
+            "node": "Valid Famer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid Famer": {
+      "main": [
+        [
+          {
+            "node": "Save Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Message": {
+      "main": [
+        [
+          {
+            "node": "Classify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "5a630aab-d5a6-4ee7-a9c9-e8effe7c077c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e699cbf6a2a899a3a6965687fa5a50117a9f45c4d2698b954b5b84c45d00ff09"
+  },
+  "nodeGroups": [],
+  "id": "V5tady8OybFNnYzF",
+  "tags": []
+}

@@ -114,96 +114,90 @@ export function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
   return (
     <>
       {mobileOpen && (
-        <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden" onClick={onClose} aria-hidden="true" />
+        <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={onClose} aria-hidden="true" />
       )}
       <aside className={cn(
-        "fixed left-0 top-0 z-50 flex h-screen w-64 flex-col border-r border-border bg-card transition-transform duration-200 lg:translate-x-0",
+        "fixed left-0 top-0 z-50 flex h-screen w-60 flex-col border-r border-border bg-background transition-transform duration-200 lg:translate-x-0",
         mobileOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-      <div className="flex items-center gap-2 border-b border-border px-4 py-4">
-        <Link href="/" className="group -m-2 flex flex-1 items-center gap-3 rounded-xl p-2 transition hover:bg-primary/5">
-          <div className="relative flex h-10 w-10 items-center justify-center rounded-xl gradient-primary glow shrink-0 group-hover:scale-105 transition">
-            <Shield className="h-5 w-5 text-white" />
-            <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-success border-2 border-card" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-sm font-bold tracking-tight group-hover:text-primary transition">RiceGuard</h1>
-            <p className="text-[10px] text-muted-foreground -mt-0.5">Security Platform</p>
-          </div>
-        </Link>
-        <button onClick={onClose} aria-label="Đóng menu" className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent lg:hidden">
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-4 space-y-5">
-        {visibleSections.map((section) => (
-          <div key={section.title}>
-            <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/70">
-              {section.title}
-            </p>
-            <div className="space-y-1">
-              {section.items.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={onClose}
-                    className={cn(
-                      "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                      isActive
-                        ? "border border-primary/25 bg-primary/15 text-primary shadow-sm"
-                        : "border border-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
-                    )}
-                  >
-                    <Icon className={cn("h-4 w-4 transition-transform", isActive && "scale-110")} />
-                    <span className="flex-1">{item.label}</span>
-                    {item.badge && badges[item.badge] > 0 && (
-                      <span className={cn(
-                        "flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold",
-                        isActive ? "bg-primary/20 text-primary" : "bg-danger text-white"
-                      )}>
-                        {badges[item.badge]}
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
+        <div className="flex h-14 items-center gap-2 border-b border-border px-3">
+          <Link href="/" className="group flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-1 py-1 transition hover:bg-accent">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border bg-card text-primary">
+              <Shield className="h-4 w-4" />
             </div>
-          </div>
-        ))}
-
-        <Link
-          href="/"
-          onClick={onClose}
-          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition"
-        >
-          <Home className="h-4 w-4" />
-          <span className="flex-1">Trang chủ</span>
-        </Link>
-      </nav>
-
-      <div className="border-t border-border p-3">
-        <div className="group flex items-center gap-3 rounded-xl bg-accent/50 hover:bg-accent transition p-2.5">
-          <div className={cn(
-            "flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white",
-            role === "admin" ? "gradient-danger" :
-            role === "analyst" ? "gradient-cyber" :
-            role === "farmer" ? "gradient-success" : "gradient-primary"
-          )}>
-            {user?.full_name?.charAt(0) || "U"}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold truncate">{user?.full_name || "User"}</p>
-            <p className="text-[10px] text-muted-foreground capitalize">{role}</p>
-          </div>
-          <button onClick={logout} aria-label="Đăng xuất" className="p-1.5 rounded-lg hover:bg-danger/20 transition text-muted-foreground hover:text-danger">
-            <LogOut className="h-3.5 w-3.5" />
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate text-[13px] font-semibold tracking-tight">RiceGuard</h1>
+              <p className="truncate text-[10px] text-muted-foreground">Security Platform</p>
+            </div>
+          </Link>
+          <button onClick={onClose} aria-label="Đóng menu" className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground lg:hidden">
+            <X className="h-4 w-4" />
           </button>
         </div>
-      </div>
+
+        <nav className="flex-1 overflow-y-auto scrollbar-thin px-2 py-4 space-y-6">
+          {visibleSections.map((section) => (
+            <div key={section.title}>
+              <p className="mb-1.5 px-2 text-[10px] font-medium uppercase tracking-[0.08em] text-muted-foreground/60">
+                {section.title}
+              </p>
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={onClose}
+                      className={cn(
+                        "group flex h-8 items-center gap-2.5 rounded-md px-2 text-[13px] transition",
+                        isActive
+                          ? "bg-accent font-medium text-foreground"
+                          : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                      )}
+                    >
+                      <Icon className={cn("h-4 w-4 shrink-0", isActive ? "text-primary" : "text-muted-foreground/80")} />
+                      <span className="flex-1 truncate">{item.label}</span>
+                      {item.badge && badges[item.badge] > 0 && (
+                        <span className={cn(
+                          "flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-semibold",
+                          isActive ? "bg-primary/15 text-primary" : "bg-danger/15 text-danger"
+                        )}>
+                          {badges[item.badge]}
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          <Link
+            href="/"
+            onClick={onClose}
+            className="flex h-8 items-center gap-2.5 rounded-md px-2 text-[13px] text-muted-foreground transition hover:bg-accent/60 hover:text-foreground"
+          >
+            <Home className="h-4 w-4" />
+            <span className="flex-1">Trang chủ</span>
+          </Link>
+        </nav>
+
+        <div className="border-t border-border p-2">
+          <div className="flex items-center gap-2 rounded-md p-1.5 transition hover:bg-accent">
+            <div className="flex h-7 w-7 items-center justify-center rounded-full border border-border bg-card text-[11px] font-semibold">
+              {user?.full_name?.charAt(0) || "U"}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-medium">{user?.full_name || "User"}</p>
+              <p className="text-[10px] capitalize text-muted-foreground">{role}</p>
+            </div>
+            <button onClick={logout} aria-label="Đăng xuất" className="rounded-md p-1.5 text-muted-foreground transition hover:bg-danger/10 hover:text-danger">
+              <LogOut className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
       </aside>
     </>
   );

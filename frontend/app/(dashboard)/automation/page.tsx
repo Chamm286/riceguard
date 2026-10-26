@@ -62,13 +62,6 @@ const statusLabel: Record<string, string> = {
   error: 'Lỗi',
 };
 
-const ownerColor: Record<string, string> = {
-  'Bích Trâm': 'gradient-primary',
-  'Tống Mỹ Trà': 'gradient-cyber',
-  'Trần Anh Tuấn': 'gradient-success',
-  'Hữu Thuận': 'gradient-warning',
-};
-
 const workflowLabels: Record<string, string> = {
   'soc-alert-triage': 'SOC Alert Triage',
   'rice-disease-diagnosis': 'Chẩn đoán bệnh lúa',
@@ -162,19 +155,19 @@ export default function AutomationPage() {
   }), [stats, workflows]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Tự động hóa n8n"
         description="Theo dõi 4 luồng workflow và lịch sử thực thi từ workflow_logs"
         action={
-          <button onClick={refresh} className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium transition hover:border-primary/50">
-            <RefreshCw className={`h-4 w-4 ${workflowsQuery.refreshing ? 'animate-spin' : ''}`} /> Làm mới
+          <button onClick={refresh} className="flex h-8 items-center gap-2 rounded-md border border-border bg-card px-3 text-xs font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground">
+            <RefreshCw className={`h-3.5 w-3.5 ${workflowsQuery.refreshing ? 'animate-spin' : ''}`} /> Làm mới
           </button>
         }
       />
 
       {!statsQuery.loading && !liveControl && (
-        <div className="flex items-start gap-3 rounded-2xl border border-warning/30 bg-warning/10 p-4 text-sm text-warning">
+        <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/5 p-3 text-sm text-warning">
           <Info className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
             <p className="font-semibold">Chưa bật điều khiển trực tiếp</p>
@@ -184,19 +177,19 @@ export default function AutomationPage() {
       )}
 
       {notice && (
-        <div className={`rounded-xl border p-3 text-sm ${notice.type === 'ok' ? 'border-success/30 bg-success/10 text-success' : 'border-danger/30 bg-danger/10 text-danger'}`}>
+        <div className={`rounded-lg border p-3 text-xs ${notice.type === 'ok' ? 'border-success/30 bg-success/10 text-success' : 'border-danger/30 bg-danger/10 text-danger'}`}>
           {notice.text}
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard label="Tổng luồng" value={formatNumber(counts.total)} icon={Workflow} />
         <StatCard label="Đang chạy" value={formatNumber(counts.active)} icon={CheckCircle} color="gradient-success" delay={0.05} />
         <StatCard label="Tạm dừng" value={formatNumber(counts.paused)} icon={Pause} color="gradient-warning" delay={0.1} />
         <StatCard label="Lỗi" value={formatNumber(counts.errors)} icon={XCircle} color="gradient-danger" delay={0.15} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card p-4">
+      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5">
         <div className="flex items-center gap-2 text-sm">
           <Activity className="h-4 w-4 text-primary" />
           <span className="font-semibold">{formatNumber(stats?.totalExecutions)}</span>
@@ -215,8 +208,8 @@ export default function AutomationPage() {
             <button
               key={item.id}
               onClick={() => setFilter(item.id)}
-              className={`rounded-xl px-3.5 py-2 text-xs font-medium transition ${
-                filter === item.id ? 'gradient-primary text-white glow' : 'border border-border text-muted-foreground hover:bg-accent'
+              className={`h-7 rounded-md px-2.5 text-[11px] font-medium transition ${
+                filter === item.id ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
               }`}
             >
               {item.label}
@@ -235,27 +228,27 @@ export default function AutomationPage() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: Math.min(index * 0.05, 0.3) }}
-              className="hover-lift flex flex-col rounded-2xl border border-border bg-card p-5"
+              className="flex flex-col rounded-lg border border-border bg-card p-4 transition hover:border-[#34353a]"
             >
               <div className="mb-4 flex items-start gap-3">
-                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${ownerColor[workflow.owner] || 'gradient-primary'} glow`}>
-                  <Icon className="h-5 w-5 text-white" />
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-border bg-background text-primary">
+                  <Icon className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="mb-1 flex flex-wrap items-center gap-2">
                     <span className="font-mono text-[10px] text-muted-foreground">WF-{String(workflow.id).padStart(2, '0')}</span>
-                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusStyle[workflow.status] || 'border-border bg-accent text-muted-foreground'}`}>
+                    <span className={`rounded border px-1.5 py-0.5 text-[9px] font-medium ${statusStyle[workflow.status] || 'border-border bg-accent text-muted-foreground'}`}>
                       {statusLabel[workflow.status] || workflow.status}
                     </span>
                   </div>
-                  <h4 className="truncate font-semibold">{workflowLabels[workflow.slug] || workflow.name}</h4>
+                  <h4 className="truncate text-[13px] font-medium">{workflowLabels[workflow.slug] || workflow.name}</h4>
                   <p className="truncate font-mono text-[10px] text-muted-foreground">{workflow.slug}</p>
                 </div>
               </div>
 
-              <p className="mb-4 line-clamp-2 min-h-[2.5rem] text-xs text-muted-foreground">{workflow.description || 'Không có mô tả'}</p>
+              <p className="mb-4 line-clamp-2 min-h-[2.5rem] text-[11px] leading-relaxed text-muted-foreground">{workflow.description || 'Không có mô tả'}</p>
 
-              <div className="mb-4 grid grid-cols-2 gap-3 text-xs">
+              <div className="mb-4 grid grid-cols-2 gap-3 text-[11px]">
                 <div>
                   <p className="text-muted-foreground">Kích hoạt</p>
                   <p className="mt-0.5 flex items-center gap-1 font-medium"><Radio className="h-3 w-3 text-primary" />{workflow.trigger_type || 'webhook'}</p>
@@ -282,13 +275,13 @@ export default function AutomationPage() {
                 </p>
                 <div className="flex items-center gap-1">
                   {workflow.failed_runs > 0 && <span className="mr-1 rounded-full bg-danger/10 px-2 py-0.5 text-[10px] text-danger">{workflow.failed_runs} lỗi</span>}
-                  <button onClick={() => openLogs(workflow)} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-primary/10 hover:text-primary" title="Lịch sử chạy">
+                  <button onClick={() => openLogs(workflow)} className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground" title="Lịch sử chạy">
                     <History className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={() => handleRun(workflow)}
                     disabled={actionId === workflow.id || workflow.slug === 'soc-alert-triage'}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
                     title={workflow.slug === 'soc-alert-triage' ? 'SOC tự chạy khi có sự kiện bảo mật' : 'Chạy thử workflow'}
                   >
                     {actionId === workflow.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
@@ -296,7 +289,7 @@ export default function AutomationPage() {
                   <button
                     onClick={() => handleToggle(workflow)}
                     disabled={actionId === workflow.id}
-                    className={`flex h-8 w-8 items-center justify-center rounded-lg transition disabled:opacity-50 ${workflow.status === 'active' ? 'text-warning hover:bg-warning/10' : 'text-success hover:bg-success/10'}`}
+                    className={`flex h-7 w-7 items-center justify-center rounded-md transition disabled:opacity-50 ${workflow.status === 'active' ? 'text-warning hover:bg-warning/10' : 'text-success hover:bg-success/10'}`}
                     title={workflow.status === 'active' ? 'Tạm dừng' : 'Bật'}
                   >
                     {actionId === workflow.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : workflow.status === 'active' ? <Pause className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
@@ -312,15 +305,15 @@ export default function AutomationPage() {
       <AnimatePresence>
         {selected && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setSelected(null)}>
-            <motion.div initial={{ scale: 0.96, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.96 }} onClick={(event) => event.stopPropagation()} className="flex max-h-[80vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
-              <div className="flex items-center justify-between border-b border-border p-5">
+            <motion.div initial={{ scale: 0.98, y: 8 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.98 }} onClick={(event) => event.stopPropagation()} className="flex max-h-[80vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg border border-border bg-card">
+              <div className="flex items-center justify-between border-b border-border p-4">
                 <div>
                   <h3 className="font-semibold">{workflowLabels[selected.slug] || selected.name}</h3>
                   <p className="font-mono text-xs text-muted-foreground">{selected.slug} • 30 lần chạy gần nhất</p>
                 </div>
                 <button onClick={() => setSelected(null)} className="rounded-lg p-1.5 text-muted-foreground hover:bg-accent"><X className="h-4 w-4" /></button>
               </div>
-              <div className="overflow-auto p-5">
+              <div className="overflow-auto p-4">
                 {logsLoading ? (
                   <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Đang tải log...</div>
                 ) : logs.length === 0 ? (
@@ -328,10 +321,10 @@ export default function AutomationPage() {
                 ) : (
                   <div className="space-y-2">
                     {logs.map((log) => (
-                      <div key={log.id} className="flex items-start gap-3 rounded-xl border border-border p-3 text-sm">
-                        <span className={`mt-0.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase ${
-                          log.status === 'success' ? 'border-success/30 bg-success/10 text-success' :
-                          log.status === 'failed' || log.status === 'error' ? 'border-danger/30 bg-danger/10 text-danger' :
+                      <div key={log.id} className="flex items-start gap-3 rounded-md border border-border p-2.5 text-xs">
+                        <span className={`mt-0.5 rounded border px-1.5 py-0.5 text-[9px] font-medium uppercase ${
+                          log.status === 'success' ? 'border-success/25 bg-success/10 text-success' :
+                          log.status === 'failed' || log.status === 'error' ? 'border-danger/25 bg-danger/10 text-danger' :
                           'border-border bg-accent text-muted-foreground'
                         }`}>{log.status}</span>
                         <div className="min-w-0 flex-1">

@@ -42,40 +42,36 @@ export function Topbar({ onMenu }: TopbarProps) {
   const online = health.data?.status === "ok" && !health.error;
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-background/80 px-4 backdrop-blur-xl md:px-6">
+    <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-border bg-background/90 px-3 backdrop-blur md:px-5">
       <button
         onClick={onMenu}
         aria-label="Mở menu"
-        className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground lg:hidden"
+        className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground lg:hidden"
       >
         <Menu className="h-4 w-4" />
       </button>
-      <div className="flex min-w-0 items-center gap-2 text-sm">
-        <Link href="/dashboard" className="shrink-0 font-semibold text-muted-foreground transition hover:text-foreground">
+      <div className="flex min-w-0 items-center gap-1.5 text-[13px]">
+        <Link href="/dashboard" className="shrink-0 text-muted-foreground transition hover:text-foreground">
           RiceGuard
         </Link>
         {parts.map((part, index) => (
-          <span key={`${part}-${index}`} className="flex min-w-0 items-center gap-2">
-            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-            <span className={index === parts.length - 1 ? "truncate font-medium" : "truncate text-muted-foreground"}>{part}</span>
+          <span key={`${part}-${index}`} className="flex min-w-0 items-center gap-1.5">
+            <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground/50" />
+            <span className={index === parts.length - 1 ? "truncate font-medium text-foreground" : "truncate text-muted-foreground"}>{part}</span>
           </span>
         ))}
       </div>
 
-      <div className="ml-auto flex items-center gap-2">
-        <div className="hidden items-center gap-2 rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground sm:flex">
-          <span className="relative flex h-2 w-2">
-            <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${online ? "bg-success" : "bg-danger"} opacity-60`} />
-            <span className={`relative inline-flex h-2 w-2 rounded-full ${online ? "bg-success" : "bg-danger"}`} />
-          </span>
+      <div className="ml-auto flex items-center gap-1">
+        <div className="hidden items-center gap-1.5 px-2 text-[11px] text-muted-foreground sm:flex">
           <ShieldCheck className={`h-3.5 w-3.5 ${online ? "text-success" : "text-danger"}`} />
-          {online ? "Hệ thống trực tuyến" : "Mất kết nối"}
+          <span>{online ? "Trực tuyến" : "Mất kết nối"}</span>
         </div>
 
         <Link
           href="/alerts"
           aria-label="Xem cảnh báo"
-          className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card transition hover:bg-accent"
+          className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground"
         >
           <Bell className="h-4 w-4" />
         </Link>
@@ -83,7 +79,7 @@ export function Topbar({ onMenu }: TopbarProps) {
         <Link
           href="/settings"
           aria-label="Cài đặt"
-          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card transition hover:bg-accent"
+          className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground"
         >
           <Settings className="h-4 w-4" />
         </Link>

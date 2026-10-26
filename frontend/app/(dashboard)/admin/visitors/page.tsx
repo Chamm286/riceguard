@@ -134,21 +134,21 @@ export default function VisitorsPage() {
   }, [visitors, search]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         title="Người truy cập"
         description="Giám sát lượt truy cập, vị trí IP và dấu hiệu bất thường"
         action={
           <button
             onClick={fetchAll}
-            className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium transition hover:border-primary/50"
+            className="flex h-8 items-center gap-2 rounded-md border border-border bg-card px-3 text-xs font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground"
           >
             <RefreshCw className="h-4 w-4" /> Làm mới
           </button>
         }
       />
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard label="Tổng lượt truy cập" value={formatNumber(visitorStats?.totalVisitors ?? visitors.length)} icon={Activity} />
         <StatCard label="24 giờ qua" value={formatNumber(visitorStats?.last24h ?? 0)} icon={Clock} color="gradient-cyber" delay={0.05} />
         <StatCard label="Cảnh báo nghiêm trọng" value={formatNumber(visitorStats?.alertCritical ?? 0)} icon={ShieldAlert} color="gradient-danger" delay={0.1} />
@@ -156,78 +156,70 @@ export default function VisitorsPage() {
       </div>
 
       {/* Live bar */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-3 rounded-2xl border border-success/30 bg-success/5 p-4"
-      >
-        <div className="relative">
-          <div className="absolute inset-0 rounded-full bg-success animate-ping opacity-30" />
-          <div className="relative h-3 w-3 rounded-full bg-success" />
-        </div>
-        <span className="text-sm font-semibold text-success">Giám sát trực tiếp</span>
-        <span className="text-xs text-muted-foreground ml-auto">
-          {visitors.length} visitor • {alerts.length} alert • {geoIPs.length} IP định vị
-          {liveCount > 0 && ` • +${liveCount} mới`}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-border bg-card px-3 py-2 text-[11px] text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-success" />
+          <span className="font-medium text-foreground">Giám sát trực tiếp</span>
         </span>
-      </motion.div>
-
-      {/* Tabs */}
-      <div className="flex gap-2 border-b border-border flex-wrap">
-        <Tab active={tab === "alerts"} onClick={() => setTab("alerts")}>
-          <ShieldAlert className="h-4 w-4" /> Cảnh báo bảo mật ({alerts.length})
-        </Tab>
-        <Tab active={tab === "logs"} onClick={() => setTab("logs")}>
-          <Activity className="h-4 w-4" /> Nhật ký truy cập ({visitors.length})
-        </Tab>
-        <Tab active={tab === "map"} onClick={() => setTab("map")}>
-          <Globe className="h-4 w-4" /> Bản đồ IP ({geoIPs.length})
-        </Tab>
+        <span>{visitors.length} lượt truy cập</span>
+        <span>{alerts.length} cảnh báo</span>
+        <span>{geoIPs.length} IP định vị</span>
+        {liveCount > 0 && <span className="text-success">+{liveCount} mới</span>}
       </div>
 
-      {/* Filters */}
-      {tab === "alerts" && (
-        <div className="flex gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-[240px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Tìm theo IP, tiêu đề, loại threat..."
-              className="w-full rounded-xl border border-border bg-card pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-          </div>
-          <select
-            value={severityFilter}
-            onChange={(e) => setSeverityFilter(e.target.value)}
-            className="rounded-xl border border-border bg-card px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-          >
-            <option value="">Tất cả mức độ</option>
-            <option value="critical">Critical</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
-        </div>
-      )}
+      <div className="inline-flex flex-wrap rounded-md border border-border bg-card p-0.5">
+        <Tab active={tab === "alerts"} onClick={() => setTab("alerts")}>
+          <ShieldAlert className="h-3.5 w-3.5" /> Cảnh báo <span className="text-muted-foreground">{alerts.length}</span>
+        </Tab>
+        <Tab active={tab === "logs"} onClick={() => setTab("logs")}>
+          <Activity className="h-3.5 w-3.5" /> Truy cập <span className="text-muted-foreground">{visitors.length}</span>
+        </Tab>
+        <Tab active={tab === "map"} onClick={() => setTab("map")}>
+          <Globe className="h-3.5 w-3.5" /> Bản đồ <span className="text-muted-foreground">{geoIPs.length}</span>
+        </Tab>
+      </div>
 
       {/* Content */}
       <AnimatePresence mode="wait">
         {tab === "alerts" && (
           <motion.div key="alerts" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <DataState
-              loading={alertsQuery.loading}
-              error={alertsQuery.error}
-              empty={!alertsQuery.loading && !alertsQuery.error && filteredAlerts.length === 0}
-              emptyText="Chưa có alert nào"
-              onRetry={alertsQuery.refetch}
-            >
-              <div className="space-y-3">
-                {filteredAlerts.map((a, i) => (
-                  <AlertCard key={a.id} alert={a} index={i} onClick={() => setSelectedAlert(a)} />
-                ))}
+            <div className="overflow-hidden rounded-lg border border-border bg-card">
+              <div className="flex flex-wrap gap-2 border-b border-border p-3">
+                <div className="relative min-w-[220px] flex-1">
+                  <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Tìm theo IP, tiêu đề, loại cảnh báo..."
+                    className="h-8 w-full rounded-md border border-border bg-background pl-8 pr-3 text-xs outline-none placeholder:text-muted-foreground/60 focus:border-primary/60 focus:ring-2 focus:ring-primary/10"
+                  />
+                </div>
+                <select
+                  value={severityFilter}
+                  onChange={(e) => setSeverityFilter(e.target.value)}
+                  className="h-8 rounded-md border border-border bg-background px-2.5 text-xs text-muted-foreground outline-none focus:border-primary/60"
+                >
+                  <option value="">Tất cả mức độ</option>
+                  <option value="critical">Nghiêm trọng</option>
+                  <option value="high">Cao</option>
+                  <option value="medium">Trung bình</option>
+                  <option value="low">Thấp</option>
+                </select>
               </div>
-            </DataState>
+              <DataState
+                loading={alertsQuery.loading}
+                error={alertsQuery.error}
+                empty={!alertsQuery.loading && !alertsQuery.error && filteredAlerts.length === 0}
+                emptyText="Chưa có cảnh báo nào"
+                onRetry={alertsQuery.refetch}
+              >
+                <div className="divide-y divide-border">
+                  {filteredAlerts.map((a, i) => (
+                    <AlertCard key={a.id} alert={a} index={i} onClick={() => setSelectedAlert(a)} />
+                  ))}
+                </div>
+              </DataState>
+            </div>
           </motion.div>
         )}
 
@@ -240,7 +232,7 @@ export default function VisitorsPage() {
               emptyText="Chưa có lượt truy cập nào"
               onRetry={visitorsQuery.refetch}
             >
-            <div className="overflow-x-auto max-h-[600px] rounded-2xl border border-border bg-card">
+            <div className="overflow-x-auto max-h-[600px] rounded-lg border border-border bg-card">
               <table className="w-full">
                 <thead className="sticky top-0 bg-card z-10">
                   <tr className="border-b border-border bg-accent/30">
@@ -286,19 +278,19 @@ export default function VisitorsPage() {
               onRetry={mapQuery.refetch}
             >
               <div className="space-y-4">
-                <div className="rounded-2xl border border-border overflow-hidden">
+                <div className="rounded-lg border border-border overflow-hidden">
                   <VisitorMap geoIPs={geoIPs} />
                 </div>
 
-                <div className="rounded-2xl border border-border bg-card overflow-hidden">
+                <div className="rounded-lg border border-border bg-card overflow-hidden">
                   <div className="border-b border-border p-4">
                     <h3 className="font-semibold">Danh sách IP đã định vị ({geoIPs.length})</h3>
                   </div>
                   <div className="divide-y divide-border max-h-[400px] overflow-y-auto">
                     {geoIPs.map((g) => (
-                      <div key={g.ip_address} className="flex items-center gap-4 p-4 hover:bg-accent/30 transition">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-primary">
-                          <MapPin className="h-5 w-5 text-white" />
+                      <div key={g.ip_address} className="flex items-center gap-3 p-3 transition hover:bg-accent/30">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-background text-primary">
+                          <MapPin className="h-4 w-4" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-mono font-semibold">{g.ip_address}</p>
@@ -385,47 +377,50 @@ function AlertCard({ alert, index, onClick }: { alert: Alert; index: number; onC
     suspicious_path: LinkIcon,
     suspicious_ua: AlertTriangle,
   };
-  const colors: Record<string, { bg: string; border: string; text: string; grad: string }> = {
-    critical: { bg: "bg-danger/10", border: "border-danger/40", text: "text-danger", grad: "gradient-danger" },
-    high: { bg: "bg-warning/10", border: "border-warning/40", text: "text-warning", grad: "gradient-warning" },
-    medium: { bg: "bg-cyber/10", border: "border-cyber/40", text: "text-cyber", grad: "gradient-cyber" },
-    low: { bg: "bg-muted/10", border: "border-border", text: "text-muted-foreground", grad: "gradient-primary" },
+  const colors: Record<string, { bg: string; border: string; text: string }> = {
+    critical: { bg: "bg-danger/10", border: "border-danger/25", text: "text-danger" },
+    high: { bg: "bg-warning/10", border: "border-warning/25", text: "text-warning" },
+    medium: { bg: "bg-cyber/10", border: "border-cyber/25", text: "text-cyber" },
+    low: { bg: "bg-success/10", border: "border-success/25", text: "text-success" },
   };
   const severity = normalizeSeverity(alert.severity);
   const c = colors[severity] || colors.low;
   const type = alertType(alert);
   const Icon = icons[type] || AlertTriangle;
+  const typeLabel = alertTypeLabels[type] || type.replace(/_/g, " ");
 
   return (
     <motion.button
       onClick={onClick}
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.02 }}
-      className={`w-full text-left rounded-2xl border ${c.border} ${c.bg} p-4 hover:shadow-lg hover:scale-[1.005] transition cursor-pointer`}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: Math.min(index * 0.01, 0.15) }}
+      className="group flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-accent/40"
     >
-      <div className="flex items-start gap-4">
-        <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${c.grad} shrink-0 shadow-lg`}>
-          <Icon className="h-5 w-5 text-white" />
+      <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md border ${c.border} ${c.bg} ${c.text}`}>
+        <Icon className="h-3.5 w-3.5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className="truncate text-[13px] font-medium">{alert.title}</p>
+          <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-medium ${c.border} ${c.bg} ${c.text}`}>
+            {alertSeverityLabels[severity] || alert.severity}
+          </span>
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-sm">{alert.title}</h3>
-            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${c.bg} ${c.text}`}>
-              {alertSeverityLabels[severity] || alert.severity}
-            </span>
-            <span className="text-[10px] uppercase px-2 py-0.5 rounded-full bg-accent/50 text-muted-foreground font-mono">
-              {alertTypeLabels[type] || type.replace(/_/g, " ")}
-            </span>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">{alert.description}</p>
-          <div className="flex items-center gap-4 mt-3 text-[10px] text-muted-foreground">
-            <span className="font-mono font-semibold text-foreground">🌐 {alert.ip_address}</span>
-            <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{new Date(alert.created_at).toLocaleString("vi-VN")}</span>
-            <span className="flex items-center gap-1 text-primary"><Eye className="h-3 w-3" />Chi tiết</span>
-          </div>
+        <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{alert.description || "Không có mô tả"}</p>
+        <div className="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground md:hidden">
+          <span className="font-mono">{alert.ip_address}</span>
+          <span>{new Date(alert.created_at).toLocaleString("vi-VN")}</span>
         </div>
       </div>
+      <div className="hidden shrink-0 items-center gap-4 text-[10px] text-muted-foreground md:flex">
+        <span className="w-32 font-mono">{alert.ip_address}</span>
+        <span className="w-32 text-right">{new Date(alert.created_at).toLocaleString("vi-VN")}</span>
+        <span className="w-28 truncate rounded border border-border bg-background px-1.5 py-0.5 text-center font-mono uppercase text-muted-foreground">
+          {typeLabel}
+        </span>
+      </div>
+      <Eye className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 transition group-hover:text-foreground" />
     </motion.button>
   );
 }
@@ -437,27 +432,27 @@ function AlertModal({ alert, onClose }: { alert: Alert; onClose: () => void }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       onClick={onClose}
-      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
     >
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.95, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
-        className="relative max-w-2xl w-full rounded-2xl border border-border bg-card p-6"
+        className="relative w-full max-w-lg rounded-lg border border-border bg-card p-5"
       >
         <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-lg hover:bg-accent transition">
           <X className="h-4 w-4" />
         </button>
 
         <div className="flex items-center gap-3 mb-4">
-          <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${
-            normalizeSeverity(alert.severity) === "critical" ? "gradient-danger" : normalizeSeverity(alert.severity) === "high" ? "gradient-warning" : "gradient-primary"
+          <div className={`flex h-9 w-9 items-center justify-center rounded-md border ${
+            normalizeSeverity(alert.severity) === "critical" ? "border-danger/25 bg-danger/10 text-danger" : normalizeSeverity(alert.severity) === "high" ? "border-warning/25 bg-warning/10 text-warning" : "border-border bg-background text-primary"
           }`}>
-            <ShieldAlert className="h-6 w-6 text-white" />
+            <ShieldAlert className="h-4 w-4" />
           </div>
           <div>
-            <h2 className="text-lg font-bold">{alert.title}</h2>
+            <h2 className="text-base font-semibold">{alert.title}</h2>
             <p className="text-xs text-muted-foreground">Alert #{alert.id}</p>
           </div>
         </div>
@@ -471,13 +466,13 @@ function AlertModal({ alert, onClose }: { alert: Alert; onClose: () => void }) {
           <Row label="Thời gian" value={new Date(alert.created_at).toLocaleString("vi-VN")} />
         </div>
 
-        <div className="mt-5 flex gap-3">
+        <div className="mt-4 flex gap-2">
           <a href={`https://www.virustotal.com/gui/ip-address/${alert.ip_address}`} target="_blank" rel="noopener noreferrer"
-            className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-border bg-accent py-2.5 text-sm font-semibold hover:bg-accent/80 transition">
+            className="flex h-8 flex-1 items-center justify-center gap-2 rounded-md border border-border bg-background text-xs font-medium transition hover:bg-accent">
             <ExternalLink className="h-4 w-4" /> VirusTotal
           </a>
           <a href={`https://ipinfo.io/${alert.ip_address}`} target="_blank" rel="noopener noreferrer"
-            className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-border bg-accent py-2.5 text-sm font-semibold hover:bg-accent/80 transition">
+            className="flex h-8 flex-1 items-center justify-center gap-2 rounded-md border border-border bg-background text-xs font-medium transition hover:bg-accent">
             <Globe className="h-4 w-4" /> Xem vị trí IP
           </a>
         </div>
@@ -488,9 +483,9 @@ function AlertModal({ alert, onClose }: { alert: Alert; onClose: () => void }) {
 
 function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="flex gap-3 py-2 border-b border-border last:border-0">
-      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground w-32 shrink-0">{label}</p>
-      <p className={`text-sm flex-1 ${mono ? "font-mono" : ""}`}>{value}</p>
+    <div className="flex gap-3 border-b border-border py-2 last:border-0">
+      <p className="w-28 shrink-0 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className={`flex-1 text-xs ${mono ? "font-mono" : ""}`}>{value}</p>
     </div>
   );
 }
@@ -498,8 +493,8 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
 function Tab({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <button onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition -mb-px ${
-        active ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+      className={`flex h-7 items-center gap-1.5 rounded px-2.5 text-[11px] font-medium transition ${
+        active ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"
       }`}>
       {children}
     </button>

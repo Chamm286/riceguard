@@ -28,9 +28,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-background">
       <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
-      <div className="lg:pl-64">
+      <div className="lg:pl-60">
         <Topbar onMenu={() => setMobileOpen(true)} />
-        <main className="mx-auto max-w-[1600px] p-4 md:p-6 lg:p-8">{children}</main>
+        <main className="mx-auto max-w-[1440px] p-4 md:p-6 lg:p-8">{children}</main>
       </div>
     </div>
   );

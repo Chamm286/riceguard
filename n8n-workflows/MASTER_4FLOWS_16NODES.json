@@ -283,7 +283,7 @@
       {
         "parameters": {
           "chatId": "7893336271",
-          "text": "=🚨 {{ $('🧠 Detect Attack').first().json.attack_type }} từ {{ $('🧠 Detect Attack').first().json.ip }}\\nSố lần 1h: {{ $('🗄️ Count 1h').first().json.n }}",
+          "text": "={{ '<b>🚨 CẢNH BÁO AN NINH MẠNG</b>\\n' + '━━━━━━━━━━━━━━━━━━━━\\n' + '<b>Loại tấn công:</b> ' + $('🧠 Detect Attack').first().json.attack_type + '\\n' + '<b>IP kẻ tấn công:</b> ' + $('🧠 Detect Attack').first().json.ip + '\\n' + '<b>Quốc gia:</b> ' + ($('🌍 GeoIP Lookup').first().json.country || 'N/A') + '\\n' + '<b>Mục tiêu:</b> ' + $('🔧 Normalize Data').first().json.path + '\\n' + '<b>Số lần 1h:</b> ' + $('🗄️ Count 1h').first().json.n + '\\n' + '<b>Mức độ:</b> ' + $('⬆️ Severity Escalation').first().json.severity.toUpperCase() + '\\n' + '━━━━━━━━━━━━━━━━━━━━\\n' + '<b>Hành động:</b> ' + ($('🚫 Block IP').first().json.status || 'Đang xử lý') + '\\n' + '<b>Thời gian:</b> ' + new Date().toLocaleString('vi-VN') }}",
           "additionalFields": {
             "parse_mode": "HTML"
           }
@@ -470,8 +470,10 @@
         ],
         "parameters": {
           "chatId": "7893336271",
-          "text": "={{ 'Alert: '+$json.attack_type+' from '+$json.ip_address+' sev='+$json.severity }}",
-          "additionalFields": {}
+          "text": "={{ '<b>⚠️ THÔNG BÁO PHỤ</b>\\n' + '━━━━━━━━━━━━━━━━━━━━\\n' + '<b>Alert:</b> ' + $json.attack_type + '\\n' + '<b>IP:</b> ' + $json.ip_address + '\\n' + '<b>Severity:</b> ' + $json.severity + '\\n' + '<b>Time:</b> ' + new Date().toLocaleString('vi-VN') }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
         },
         "credentials": {
           "telegramApi": {
@@ -2161,7 +2163,7 @@
       {
         "parameters": {
           "chatId": "7893336271",
-          "text": "={{ $json.msg }}",
+          "text": "={{ '<b>📊 BÁO CÁO BẢO MẬT HÀNG NGÀY</b>\\n' + '━━━━━━━━━━━━━━━━━━━━\\n' + '<b>Thời gian:</b> ' + new Date().toLocaleString('vi-VN') + '\\n' + '<b>Tổng cảnh báo:</b> ' + ($('📊 Aggregate Stats').first().json.total || 0) + '\\n' + '<b>Xu hướng:</b> ' + ($('📈 Trend Analysis').first().json.trend || 'N/A') + '\\n' + '<b>Mức rủi ro:</b> ' + ($('📈 Trend Analysis').first().json.risk_level || 'N/A') + '\\n' + '━━━━━━━━━━━━━━━━━━━━\\n' + '<i>RiceGuard Security Platform</i>' }}",
           "additionalFields": {
             "parse_mode": "HTML"
           }
@@ -2578,5 +2580,448 @@
     },
     "active": true,
     "id": "36e021f2-3cfc-48fa-9e63-ee909498d4eb"
+  },
+  {
+    "name": "🤖 AI Chat Assistant",
+    "nodes": [
+      {
+        "id": "w1",
+        "name": "📥 Webhook - AI Chat",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          100,
+          200
+        ],
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "ai-chat",
+          "responseMode": "responseNode",
+          "options": {}
+        }
+      },
+      {
+        "id": "n1",
+        "name": "🔧 Normalize Input",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          260,
+          200
+        ],
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "a1",
+                "name": "message",
+                "value": "={{ $json.body.message || $json.message }}",
+                "type": "string"
+              },
+              {
+                "id": "a2",
+                "name": "user_id",
+                "value": "={{ $json.body.user_id || 'anonymous' }}",
+                "type": "string"
+              },
+              {
+                "id": "a3",
+                "name": "timestamp",
+                "value": "={{ new Date().toISOString() }}",
+                "type": "string"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "n2",
+        "name": "🧠 Classify Intent",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          420,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const msg=($input.first().json.message||'').toLowerCase();\nlet intent='general';\nif(msg.includes('alert')||msg.includes('cảnh báo'))intent='alerts';\nelse if(msg.includes('threat')||msg.includes('đe dọa'))intent='threats';\nelse if(msg.includes('ip')||msg.includes('block'))intent='firewall';\nelse if(msg.includes('risk')||msg.includes('rủi ro'))intent='risk';\nelse if(msg.includes('visitor')||msg.includes('truy cập'))intent='visitors';\nconst item=$input.first().json;\nitem.intent=intent;\nreturn [{json:item}];"
+        }
+      },
+      {
+        "id": "n3",
+        "name": "🔀 Intent Router",
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3,
+        "position": [
+          580,
+          200
+        ],
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "outputKey": "alerts",
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.intent }}",
+                      "rightValue": "alerts",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "outputKey": "threats",
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.intent }}",
+                      "rightValue": "threats",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "outputKey": "firewall",
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.intent }}",
+                      "rightValue": "firewall",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "outputKey": "risk",
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.intent }}",
+                      "rightValue": "risk",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "n4",
+        "name": "🗄️ Query Alerts",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          740,
+          80
+        ],
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE status='new')::int AS new_count, COUNT(*) FILTER (WHERE LOWER(severity)='critical')::int AS critical FROM alerts",
+          "options": {}
+        },
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "id": "n5",
+        "name": "🗄️ Query Threats",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          740,
+          200
+        ],
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE status='blocked')::int AS blocked FROM threats",
+          "options": {}
+        },
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "id": "n6",
+        "name": "🗄️ Query Firewall",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          740,
+          320
+        ],
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COUNT(*)::int AS blocked_ips FROM blocked_ips",
+          "options": {}
+        },
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "id": "n7",
+        "name": "🗄️ Query Risk",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          740,
+          440
+        ],
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COUNT(*) FILTER (WHERE LOWER(severity)='critical' AND status<>'resolved')::int AS critical_open FROM alerts",
+          "options": {}
+        },
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "id": "n8",
+        "name": "🧠 Format Response",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          900,
+          260
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nconst msg=item.message||'';\nlet reply='Xin chào! Tôi là RiceGuard AI.';\nif(item.intent==='alerts') reply='Hiện có '+ (item.total||0)+' cảnh báo, '+ (item.new_count||0)+' chưa xử lý, '+(item.critical||0)+' mức critical.';\nelse if(item.intent==='threats') reply='Có '+(item.total||0)+' mối đe dọa, '+(item.blocked||0)+' IP đã bị chặn.';\nelse if(item.intent==='firewall') reply='Hệ thống đã chặn '+(item.blocked_ips||0)+' IP.';\nelse if(item.intent==='risk') reply='Mức rủi ro: '+(item.critical_open||0)+' cảnh báo critical chưa giải quyết.';\nelse reply='Tôi có thể giúp bạn về cảnh báo, mối đe dọa, IP bị chặn, và rủi ro hệ thống.';\nreturn [{json:{reply,timestamp:new Date().toISOString(),intent:item.intent}}];"
+        }
+      },
+      {
+        "id": "n9",
+        "name": "📝 Log Chat",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1060,
+          260
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5000/api/n8n/log",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({workflow_id:'ai-chat-assistant',status:'success',execution_count:1,message:$json.reply}) }}",
+          "options": {}
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n10",
+        "name": "📤 Respond",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1220,
+          260
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({success:true,data:{reply:$json.reply,timestamp:$json.timestamp}}) }}"
+        }
+      },
+      {
+        "id": "n11",
+        "name": "❌ Error Handler",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          900,
+          400
+        ],
+        "parameters": {
+          "chatId": "7893336271",
+          "text": "={{ 'AI Chat error: ' + $json.message }}",
+          "additionalFields": {}
+        },
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
+      }
+    ],
+    "connections": {
+      "📥 Webhook - AI Chat": {
+        "main": [
+          [
+            {
+              "node": "🔧 Normalize Input",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Normalize Input": {
+        "main": [
+          [
+            {
+              "node": "🧠 Classify Intent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🧠 Classify Intent": {
+        "main": [
+          [
+            {
+              "node": "🔀 Intent Router",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 Intent Router": {
+        "main": [
+          [
+            {
+              "node": "🗄️ Query Alerts",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🗄️ Query Threats",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🗄️ Query Firewall",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🗄️ Query Risk",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Query Alerts": {
+        "main": [
+          [
+            {
+              "node": "🧠 Format Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Query Threats": {
+        "main": [
+          [
+            {
+              "node": "🧠 Format Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Query Firewall": {
+        "main": [
+          [
+            {
+              "node": "🧠 Format Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Query Risk": {
+        "main": [
+          [
+            {
+              "node": "🧠 Format Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🧠 Format Response": {
+        "main": [
+          [
+            {
+              "node": "📝 Log Chat",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📝 Log Chat": {
+        "main": [
+          [
+            {
+              "node": "📤 Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "active": true,
+    "id": "ai-chat-assistant"
   }
 ]

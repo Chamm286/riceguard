@@ -157,35 +157,9 @@ function labelStatus(value?: string | null) {
 function playAlarmSound(type: "critical" | "warning" = "critical") {
   if (typeof window === "undefined") return;
   try {
-    const AudioCtx = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-
-    const beep = (startTime: number, freq: number, duration: number, waveType: OscillatorType = "sawtooth") => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = waveType;
-      osc.frequency.setValueAtTime(freq, startTime);
-      osc.frequency.exponentialRampToValueAtTime(freq * 0.7, startTime + duration);
-      gain.gain.setValueAtTime(0.3, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(startTime);
-      osc.stop(startTime + duration);
-    };
-
-    const now = ctx.currentTime;
-    if (type === "critical") {
-      beep(now, 1200, 0.15);
-      beep(now + 0.25, 1200, 0.15);
-      beep(now + 0.5, 1500, 0.3);
-    } else {
-      beep(now, 800, 0.2, "sine");
-      beep(now + 0.3, 800, 0.2, "sine");
-    }
-
-    setTimeout(() => ctx.close().catch(() => {}), 2000);
+    const audio = new Audio("/alarm98299.mp3");
+    audio.volume = type === "critical" ? 0.8 : 0.5;
+    audio.play().catch(() => {});
   } catch {}
 }
 

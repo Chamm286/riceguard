@@ -6,7 +6,7 @@ import {
   LayoutDashboard, ShieldAlert, FileText, MapPin, Settings,
   Shield, LogOut, Fingerprint, FileBarChart, Home, Leaf,
   Cloud, BookOpen, Bell, Users, Activity, ScrollText,
-  FlaskConical, Target, Server, LucideIcon, X
+  FlaskConical, Target, Server, Terminal, LucideIcon, X
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
@@ -43,6 +43,7 @@ const menuSections: MenuSection[] = [
     roles: ["admin", "analyst"],
     items: [
       { href: "/dashboard", label: "Tổng quan", icon: LayoutDashboard },
+      { href: "/analyst/dashboard", label: "Analyst Console", icon: Terminal },
       { href: "/threats", label: "Mối đe dọa", icon: ShieldAlert, badge: "threats" },
       { href: "/alerts", label: "Cảnh báo", icon: Bell },
       { href: "/investigations", label: "Điều tra", icon: Fingerprint },

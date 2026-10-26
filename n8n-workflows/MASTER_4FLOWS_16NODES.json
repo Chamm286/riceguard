@@ -14,8 +14,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          -460,
-          -120
+          180,
+          240
         ]
       },
       {
@@ -29,7 +29,7 @@
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
         "position": [
-          100,
+          200,
           300
         ],
         "webhookId": "security-event"
@@ -46,8 +46,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          -180,
-          -120
+          580,
+          240
         ]
       },
       {
@@ -110,7 +110,7 @@
         "type": "n8n-nodes-base.set",
         "typeVersion": 3.4,
         "position": [
-          300,
+          400,
           300
         ]
       },
@@ -123,7 +123,7 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          500,
+          600,
           300
         ]
       },
@@ -149,7 +149,7 @@
         "type": "n8n-nodes-base.if",
         "typeVersion": 2,
         "position": [
-          900,
+          1000,
           300
         ]
       },
@@ -165,8 +165,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          360,
-          -120
+          1180,
+          140
         ]
       },
       {
@@ -182,7 +182,7 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          1100,
+          1200,
           200
         ],
         "credentials": {
@@ -205,7 +205,7 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          1700,
+          1800,
           200
         ],
         "credentials": {
@@ -237,7 +237,7 @@
         "type": "n8n-nodes-base.if",
         "typeVersion": 2,
         "position": [
-          2100,
+          2200,
           200
         ]
       },
@@ -254,7 +254,7 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4,
         "position": [
-          2300,
+          2400,
           100
         ],
         "continueOnFail": true
@@ -270,7 +270,7 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          2300,
+          2400,
           300
         ],
         "credentials": {
@@ -293,7 +293,7 @@
         "type": "n8n-nodes-base.telegram",
         "typeVersion": 1,
         "position": [
-          2700,
+          2800,
           100
         ],
         "credentials": {
@@ -317,7 +317,7 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4,
         "position": [
-          3300,
+          3400,
           200
         ],
         "continueOnFail": true
@@ -332,7 +332,7 @@
         "type": "n8n-nodes-base.respondToWebhook",
         "typeVersion": 1,
         "position": [
-          3500,
+          3600,
           200
         ]
       },
@@ -349,7 +349,7 @@
         "type": "n8n-nodes-base.telegram",
         "typeVersion": 1,
         "position": [
-          2700,
+          2800,
           400
         ],
         "credentials": {
@@ -501,70 +501,6 @@
           "options": {}
         },
         "continueOnFail": true
-      },
-      {
-        "id": "sn-trigger",
-        "name": "📥 Tiếp nhận",
-        "type": "n8n-nodes-base.stickyNote",
-        "typeVersion": 1,
-        "position": [
-          80,
-          240
-        ],
-        "parameters": {
-          "content": "## Tiếp nhận sự kiện\nWebhook nhận sự kiện bảo mật từ WAF/BE",
-          "height": 120,
-          "width": 260,
-          "color": 4
-        }
-      },
-      {
-        "id": "sn-detect",
-        "name": "🔍 Phát hiện",
-        "type": "n8n-nodes-base.stickyNote",
-        "typeVersion": 1,
-        "position": [
-          480,
-          240
-        ],
-        "parameters": {
-          "content": "## Phát hiện tấn công\nNormalize + Detect Attack + Whitelist Check",
-          "height": 120,
-          "width": 260,
-          "color": 5
-        }
-      },
-      {
-        "id": "sn-db",
-        "name": "🗄️ Database",
-        "type": "n8n-nodes-base.stickyNote",
-        "typeVersion": 1,
-        "position": [
-          1080,
-          140
-        ],
-        "parameters": {
-          "content": "## Lưu trữ & Phân tích\nSave Alert, GeoIP, Reputation, Count, AI Analysis",
-          "height": 120,
-          "width": 1000,
-          "color": 6
-        }
-      },
-      {
-        "id": "sn-response",
-        "name": "📤 Phản hồi",
-        "type": "n8n-nodes-base.stickyNote",
-        "typeVersion": 1,
-        "position": [
-          3280,
-          140
-        ],
-        "parameters": {
-          "content": "## Phản hồi & Thông báo\nNotify Telegram, Audit Log, Log Workflow, Respond",
-          "height": 120,
-          "width": 400,
-          "color": 7
-        }
       }
     ],
     "connections": {
@@ -806,8 +742,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          -460,
-          -120
+          180,
+          240
         ]
       },
       {
@@ -821,7 +757,7 @@
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
         "position": [
-          100,
+          200,
           300
         ],
         "webhookId": "new-report"
@@ -838,8 +774,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          -180,
-          -120
+          580,
+          240
         ]
       },
       {
@@ -872,7 +808,7 @@
         "type": "n8n-nodes-base.set",
         "typeVersion": 3.4,
         "position": [
-          300,
+          400,
           300
         ]
       },
@@ -892,7 +828,7 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4,
         "position": [
-          1100,
+          1200,
           300
         ],
         "continueOnFail": true
@@ -906,7 +842,7 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          1300,
+          1400,
           300
         ]
       },
@@ -923,7 +859,7 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4,
         "position": [
-          1500,
+          1600,
           300
         ],
         "continueOnFail": true
@@ -937,7 +873,7 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          1700,
+          1800,
           300
         ]
       },
@@ -953,8 +889,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          860,
-          -120
+          1180,
+          240
         ]
       },
       {
@@ -970,7 +906,7 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          2100,
+          2200,
           300
         ],
         "credentials": {
@@ -993,7 +929,7 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          2300,
+          2400,
           300
         ],
         "credentials": {
@@ -1025,7 +961,7 @@
         "type": "n8n-nodes-base.if",
         "typeVersion": 2,
         "position": [
-          2900,
+          3000,
           300
         ]
       },
@@ -1042,7 +978,7 @@
         "type": "n8n-nodes-base.telegram",
         "typeVersion": 1,
         "position": [
-          3100,
+          3200,
           200
         ],
         "credentials": {
@@ -1066,7 +1002,7 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4,
         "position": [
-          3100,
+          3200,
           400
         ],
         "continueOnFail": true
@@ -1081,7 +1017,7 @@
         "type": "n8n-nodes-base.respondToWebhook",
         "typeVersion": 1,
         "position": [
-          3300,
+          3400,
           300
         ]
       },
@@ -1229,54 +1165,6 @@
           "jsCode": "const item=$input.first().json;\nitem.retry_count=(item.retry_count||0)+1;\nif(item.retry_count>3)throw new Error('Max retries exceeded');\nreturn [{json:item}];"
         },
         "continueOnFail": true
-      },
-      {
-        "id": "sn-rice-trigger",
-        "name": "📥 Tiếp nhận",
-        "type": "n8n-nodes-base.stickyNote",
-        "typeVersion": 1,
-        "position": [
-          80,
-          240
-        ],
-        "parameters": {
-          "content": "## Tiếp nhận báo cáo\nWebhook nhận báo cáo bệnh lúa từ farmer",
-          "height": 120,
-          "width": 260,
-          "color": 4
-        }
-      },
-      {
-        "id": "sn-rice-ai",
-        "name": "🧠 Gọi AI",
-        "type": "n8n-nodes-base.stickyNote",
-        "typeVersion": 1,
-        "position": [
-          1080,
-          240
-        ],
-        "parameters": {
-          "content": "## Phân tích AI\nDownload ảnh → Encode → AI Analyze → Parse",
-          "height": 120,
-          "width": 800,
-          "color": 5
-        }
-      },
-      {
-        "id": "sn-rice-db",
-        "name": "🗄️ Database",
-        "type": "n8n-nodes-base.stickyNote",
-        "typeVersion": 1,
-        "position": [
-          2080,
-          240
-        ],
-        "parameters": {
-          "content": "## Lưu trữ & Thông báo\nUpdate Report, Query Farmer, Notify, Audit",
-          "height": 120,
-          "width": 800,
-          "color": 6
-        }
       }
     ],
     "connections": {
@@ -1509,8 +1397,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          -460,
-          -120
+          180,
+          240
         ]
       },
       {
@@ -1530,7 +1418,7 @@
         "type": "n8n-nodes-base.scheduleTrigger",
         "typeVersion": 1,
         "position": [
-          100,
+          200,
           100
         ]
       },
@@ -1546,8 +1434,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          -180,
-          -120
+          580,
+          240
         ]
       },
       {
@@ -1563,7 +1451,7 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4,
         "position": [
-          300,
+          400,
           300
         ],
         "continueOnFail": true
@@ -1577,7 +1465,7 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          500,
+          600,
           300
         ]
       },
@@ -1590,7 +1478,7 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          900,
+          1000,
           300
         ]
       },
@@ -1606,8 +1494,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          360,
-          -120
+          1380,
+          240
         ]
       },
       {
@@ -1623,7 +1511,7 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          1300,
+          1400,
           300
         ],
         "credentials": {
@@ -1646,7 +1534,7 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          1500,
+          1600,
           300
         ],
         "credentials": {
@@ -1669,7 +1557,7 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          1700,
+          1800,
           300
         ],
         "credentials": {
@@ -1701,7 +1589,7 @@
         "type": "n8n-nodes-base.if",
         "typeVersion": 2,
         "position": [
-          1900,
+          2000,
           300
         ]
       },
@@ -1718,7 +1606,7 @@
         "type": "n8n-nodes-base.telegram",
         "typeVersion": 1,
         "position": [
-          2300,
+          2400,
           200
         ],
         "credentials": {
@@ -1742,7 +1630,7 @@
         "type": "n8n-nodes-base.telegram",
         "typeVersion": 1,
         "position": [
-          2300,
+          2400,
           400
         ],
         "credentials": {
@@ -1766,7 +1654,7 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4,
         "position": [
-          2900,
+          3000,
           300
         ],
         "continueOnFail": true
@@ -1781,7 +1669,7 @@
         "type": "n8n-nodes-base.respondToWebhook",
         "typeVersion": 1,
         "position": [
-          3100,
+          3200,
           300
         ]
       },
@@ -1820,7 +1708,7 @@
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
         "position": [
-          100,
+          200,
           300
         ]
       },
@@ -1830,7 +1718,7 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          500,
+          600,
           300
         ],
         "parameters": {
@@ -1844,7 +1732,7 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          700,
+          800,
           300
         ],
         "parameters": {
@@ -1858,7 +1746,7 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          1100,
+          1200,
           300
         ],
         "parameters": {
@@ -1872,7 +1760,7 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2.4,
         "position": [
-          2100,
+          2200,
           200
         ],
         "parameters": {
@@ -1896,7 +1784,7 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          2500,
+          2600,
           300
         ],
         "parameters": {
@@ -1910,7 +1798,7 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          2700,
+          2800,
           300
         ],
         "parameters": {
@@ -1922,54 +1810,6 @@
           "options": {}
         },
         "continueOnFail": true
-      },
-      {
-        "id": "sn-sent-trigger",
-        "name": "📥 Tiếp nhận",
-        "type": "n8n-nodes-base.stickyNote",
-        "typeVersion": 1,
-        "position": [
-          80,
-          240
-        ],
-        "parameters": {
-          "content": "## Tiếp nhận\nWebhook/Cron kích hoạt sync",
-          "height": 120,
-          "width": 260,
-          "color": 4
-        }
-      },
-      {
-        "id": "sn-sent-process",
-        "name": "🧠 Xử lý",
-        "type": "n8n-nodes-base.stickyNote",
-        "typeVersion": 1,
-        "position": [
-          480,
-          240
-        ],
-        "parameters": {
-          "content": "## Xử lý dữ liệu\nValidate, Anomaly, Parse, Multi-Field",
-          "height": 120,
-          "width": 800,
-          "color": 5
-        }
-      },
-      {
-        "id": "sn-sent-db",
-        "name": "🗄️ Database",
-        "type": "n8n-nodes-base.stickyNote",
-        "typeVersion": 1,
-        "position": [
-          1280,
-          240
-        ],
-        "parameters": {
-          "content": "## Lưu trữ\nSave Feature, Prediction, Update Field",
-          "height": 120,
-          "width": 600,
-          "color": 6
-        }
       }
     ],
     "connections": {
@@ -2197,8 +2037,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          -460,
-          -120
+          180,
+          240
         ]
       },
       {
@@ -2218,7 +2058,7 @@
         "type": "n8n-nodes-base.scheduleTrigger",
         "typeVersion": 1,
         "position": [
-          100,
+          200,
           100
         ]
       },
@@ -2234,8 +2074,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          -180,
-          -120
+          380,
+          240
         ]
       },
       {
@@ -2248,7 +2088,7 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          300,
+          400,
           300
         ],
         "credentials": {
@@ -2268,7 +2108,7 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          500,
+          600,
           300
         ],
         "credentials": {
@@ -2287,7 +2127,7 @@
         "type": "n8n-nodes-base.merge",
         "typeVersion": 2,
         "position": [
-          700,
+          800,
           300
         ]
       },
@@ -2316,8 +2156,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          360,
-          -120
+          980,
+          240
         ]
       },
       {
@@ -2333,7 +2173,7 @@
         "type": "n8n-nodes-base.telegram",
         "typeVersion": 1,
         "position": [
-          1500,
+          1600,
           300
         ],
         "credentials": {
@@ -2357,7 +2197,7 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          2300,
+          2400,
           300
         ],
         "credentials": {
@@ -2380,7 +2220,7 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4,
         "position": [
-          2500,
+          2600,
           300
         ],
         "continueOnFail": true
@@ -2395,7 +2235,7 @@
         "type": "n8n-nodes-base.respondToWebhook",
         "typeVersion": 1,
         "position": [
-          2700,
+          2800,
           300
         ]
       },
@@ -2411,8 +2251,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          680,
-          -260
+          1580,
+          440
         ]
       },
       {
@@ -2428,7 +2268,7 @@
         "type": "n8n-nodes-base.telegram",
         "typeVersion": 1,
         "position": [
-          1500,
+          1600,
           500
         ],
         "credentials": {
@@ -2448,7 +2288,7 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          300,
+          400,
           100
         ]
       },
@@ -2463,7 +2303,7 @@
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
         "position": [
-          100,
+          200,
           300
         ]
       },
@@ -2501,7 +2341,7 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          1300,
+          1400,
           300
         ],
         "parameters": {
@@ -2515,7 +2355,7 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          1700,
+          1800,
           300
         ],
         "parameters": {
@@ -2534,7 +2374,7 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          1900,
+          2000,
           300
         ],
         "parameters": {
@@ -2548,7 +2388,7 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          2100,
+          2200,
           300
         ],
         "parameters": {
@@ -2560,54 +2400,6 @@
           "options": {}
         },
         "continueOnFail": true
-      },
-      {
-        "id": "sn-daily-trigger",
-        "name": "📥 Tiếp nhận",
-        "type": "n8n-nodes-base.stickyNote",
-        "typeVersion": 1,
-        "position": [
-          80,
-          240
-        ],
-        "parameters": {
-          "content": "## Tiếp nhận\nCron/Webhook kích hoạt báo cáo ngày",
-          "height": 120,
-          "width": 260,
-          "color": 4
-        }
-      },
-      {
-        "id": "sn-daily-stats",
-        "name": "🗄️ Thống kê",
-        "type": "n8n-nodes-base.stickyNote",
-        "typeVersion": 1,
-        "position": [
-          280,
-          240
-        ],
-        "parameters": {
-          "content": "## Thu thập dữ liệu\nStats 24h, Top 5 IP, Merge",
-          "height": 120,
-          "width": 600,
-          "color": 5
-        }
-      },
-      {
-        "id": "sn-daily-report",
-        "name": "📊 Báo cáo",
-        "type": "n8n-nodes-base.stickyNote",
-        "typeVersion": 1,
-        "position": [
-          880,
-          240
-        ],
-        "parameters": {
-          "content": "## Phân tích & Gửi\nAggregate, Trend, Format, Notify, Email, Audit, Save",
-          "height": 120,
-          "width": 1600,
-          "color": 6
-        }
       }
     ],
     "connections": {

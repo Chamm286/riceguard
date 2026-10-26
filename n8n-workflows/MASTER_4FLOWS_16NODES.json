@@ -501,6 +501,54 @@
           "options": {}
         },
         "continueOnFail": true
+      },
+      {
+        "id": "gn-soc-1",
+        "name": "📥 Tiếp nhận & Phát hiện",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          180,
+          240
+        ],
+        "parameters": {
+          "content": "## Tiếp nhận & Phát hiện\nWebhook → Normalize → Detect → Whitelist",
+          "height": 120,
+          "width": 660,
+          "color": 4
+        }
+      },
+      {
+        "id": "gn-soc-2",
+        "name": "🗄️ Database & Phân tích",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          1180,
+          140
+        ],
+        "parameters": {
+          "content": "## Database & Phân tích\nSave → GeoIP → Reputation → Count → AI",
+          "height": 120,
+          "width": 1000,
+          "color": 6
+        }
+      },
+      {
+        "id": "gn-soc-3",
+        "name": "📤 Phản hồi & Thông báo",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          2380,
+          40
+        ],
+        "parameters": {
+          "content": "## Phản hồi & Thông báo\nBlock/Update → Notify → Audit → Log → Respond",
+          "height": 120,
+          "width": 1400,
+          "color": 7
+        }
       }
     ],
     "connections": {
@@ -1165,6 +1213,54 @@
           "jsCode": "const item=$input.first().json;\nitem.retry_count=(item.retry_count||0)+1;\nif(item.retry_count>3)throw new Error('Max retries exceeded');\nreturn [{json:item}];"
         },
         "continueOnFail": true
+      },
+      {
+        "id": "gn-rice-1",
+        "name": "📥 Tiếp nhận",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          180,
+          240
+        ],
+        "parameters": {
+          "content": "## Tiếp nhận\nWebhook → Normalize → Validate → Dedupe → Weather",
+          "height": 120,
+          "width": 860,
+          "color": 4
+        }
+      },
+      {
+        "id": "gn-rice-2",
+        "name": "🧠 Gọi AI",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          1180,
+          240
+        ],
+        "parameters": {
+          "content": "## Gọi AI\nDownload → Encode → AI Analyze → Parse → Treatment",
+          "height": 120,
+          "width": 860,
+          "color": 5
+        }
+      },
+      {
+        "id": "gn-rice-3",
+        "name": "🗄️ Database & Thông báo",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          2180,
+          240
+        ],
+        "parameters": {
+          "content": "## Database & Thông báo\nUpdate → Query → Notify → Audit → Severity → Respond",
+          "height": 120,
+          "width": 1400,
+          "color": 6
+        }
       }
     ],
     "connections": {
@@ -1810,6 +1906,54 @@
           "options": {}
         },
         "continueOnFail": true
+      },
+      {
+        "id": "gn-sent-1",
+        "name": "📥 Tiếp nhận",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          180,
+          240
+        ],
+        "parameters": {
+          "content": "## Tiếp nhận\nWebhook/Cron → Call GEE/AI",
+          "height": 120,
+          "width": 260,
+          "color": 4
+        }
+      },
+      {
+        "id": "gn-sent-2",
+        "name": "🧠 Xử lý",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          580,
+          240
+        ],
+        "parameters": {
+          "content": "## Xử lý\nValidate → Anomaly → Parse → Multi-Field",
+          "height": 120,
+          "width": 800,
+          "color": 5
+        }
+      },
+      {
+        "id": "gn-sent-3",
+        "name": "🗄️ Database & Phản hồi",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          1380,
+          240
+        ],
+        "parameters": {
+          "content": "## Database & Phản hồi\nSave Feature/Prediction/Field → NDVI Low? → Notify/Audit → Respond",
+          "height": 120,
+          "width": 2000,
+          "color": 6
+        }
       }
     ],
     "connections": {
@@ -2400,6 +2544,54 @@
           "options": {}
         },
         "continueOnFail": true
+      },
+      {
+        "id": "gn-daily-1",
+        "name": "📥 Tiếp nhận",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          180,
+          240
+        ],
+        "parameters": {
+          "content": "## Tiếp nhận\nCron/Webhook → Health Check",
+          "height": 120,
+          "width": 260,
+          "color": 4
+        }
+      },
+      {
+        "id": "gn-daily-2",
+        "name": "🗄️ Thống kê",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          380,
+          240
+        ],
+        "parameters": {
+          "content": "## Thu thập dữ liệu\nStats 24h → Top 5 IP → Merge",
+          "height": 120,
+          "width": 600,
+          "color": 5
+        }
+      },
+      {
+        "id": "gn-daily-3",
+        "name": "📊 Báo cáo & Gửi",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          980,
+          240
+        ],
+        "parameters": {
+          "content": "## Phân tích & Gửi\nAggregate → Trend → Format → Notify → Email → Audit → Save → Respond",
+          "height": 120,
+          "width": 2000,
+          "color": 6
+        }
       }
     ],
     "connections": {
@@ -2590,8 +2782,8 @@
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 2,
         "position": [
-          100,
-          200
+          200,
+          300
         ],
         "parameters": {
           "httpMethod": "POST",
@@ -2606,8 +2798,8 @@
         "type": "n8n-nodes-base.set",
         "typeVersion": 3.4,
         "position": [
-          260,
-          200
+          400,
+          300
         ],
         "parameters": {
           "assignments": {
@@ -2640,8 +2832,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          420,
-          200
+          600,
+          300
         ],
         "parameters": {
           "jsCode": "const msg=($input.first().json.message||'').toLowerCase();\nlet intent='general';\nif(msg.includes('alert')||msg.includes('cảnh báo'))intent='alerts';\nelse if(msg.includes('threat')||msg.includes('đe dọa'))intent='threats';\nelse if(msg.includes('ip')||msg.includes('block'))intent='firewall';\nelse if(msg.includes('risk')||msg.includes('rủi ro'))intent='risk';\nelse if(msg.includes('visitor')||msg.includes('truy cập'))intent='visitors';\nconst item=$input.first().json;\nitem.intent=intent;\nreturn [{json:item}];"
@@ -2653,8 +2845,8 @@
         "type": "n8n-nodes-base.switch",
         "typeVersion": 3,
         "position": [
-          580,
-          200
+          800,
+          300
         ],
         "parameters": {
           "rules": {
@@ -2741,8 +2933,8 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2.4,
         "position": [
-          740,
-          80
+          1000,
+          100
         ],
         "parameters": {
           "operation": "executeQuery",
@@ -2762,7 +2954,7 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2.4,
         "position": [
-          740,
+          1000,
           200
         ],
         "parameters": {
@@ -2783,8 +2975,8 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2.4,
         "position": [
-          740,
-          320
+          1000,
+          300
         ],
         "parameters": {
           "operation": "executeQuery",
@@ -2804,8 +2996,8 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2.4,
         "position": [
-          740,
-          440
+          1000,
+          400
         ],
         "parameters": {
           "operation": "executeQuery",
@@ -2825,8 +3017,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          900,
-          260
+          1200,
+          250
         ],
         "parameters": {
           "jsCode": "const item=$input.first().json;\nconst msg=item.message||'';\nlet reply='Xin chào! Tôi là RiceGuard AI.';\nif(item.intent==='alerts') reply='Hiện có '+ (item.total||0)+' cảnh báo, '+ (item.new_count||0)+' chưa xử lý, '+(item.critical||0)+' mức critical.';\nelse if(item.intent==='threats') reply='Có '+(item.total||0)+' mối đe dọa, '+(item.blocked||0)+' IP đã bị chặn.';\nelse if(item.intent==='firewall') reply='Hệ thống đã chặn '+(item.blocked_ips||0)+' IP.';\nelse if(item.intent==='risk') reply='Mức rủi ro: '+(item.critical_open||0)+' cảnh báo critical chưa giải quyết.';\nelse reply='Tôi có thể giúp bạn về cảnh báo, mối đe dọa, IP bị chặn, và rủi ro hệ thống.';\nreturn [{json:{reply,timestamp:new Date().toISOString(),intent:item.intent}}];"
@@ -2838,8 +3030,8 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          1060,
-          260
+          1400,
+          250
         ],
         "parameters": {
           "method": "POST",
@@ -2857,8 +3049,8 @@
         "type": "n8n-nodes-base.respondToWebhook",
         "typeVersion": 1.1,
         "position": [
-          1220,
-          260
+          1600,
+          250
         ],
         "parameters": {
           "respondWith": "json",
@@ -2871,7 +3063,7 @@
         "type": "n8n-nodes-base.telegram",
         "typeVersion": 1.2,
         "position": [
-          900,
+          1200,
           400
         ],
         "parameters": {
@@ -2886,6 +3078,54 @@
           }
         },
         "continueOnFail": true
+      },
+      {
+        "id": "gn-ai-1",
+        "name": "📥 Tiếp nhận",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          180,
+          240
+        ],
+        "parameters": {
+          "content": "## Tiếp nhận câu hỏi\nWebhook → Normalize → Classify Intent → Router",
+          "height": 120,
+          "width": 660,
+          "color": 4
+        }
+      },
+      {
+        "id": "gn-ai-2",
+        "name": "🗄️ Truy vấn DB",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          980,
+          40
+        ],
+        "parameters": {
+          "content": "## Truy vấn Database\nQuery Alerts/Threats/Firewall/Risk theo intent",
+          "height": 420,
+          "width": 260,
+          "color": 5
+        }
+      },
+      {
+        "id": "gn-ai-3",
+        "name": "🧠 Phản hồi",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          1180,
+          190
+        ],
+        "parameters": {
+          "content": "## Phản hồi\nFormat → Log → Respond",
+          "height": 120,
+          "width": 600,
+          "color": 6
+        }
       }
     ],
     "connections": {

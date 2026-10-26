@@ -1,0 +1,92 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: riceguard-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: riceguard
+      POSTGRES_USER: riceguard_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-riceguard_secret}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/sql:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U riceguard_user -d riceguard"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: riceguard-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: riceguard
+      DB_USER: riceguard_user
+      DB_PASSWORD: ${DB_PASSWORD:-riceguard_secret}
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+      JWT_EXPIRES_IN: 7d
+      N8N_URL: http://n8n:5678
+      N8N_API_URL: http://n8n:5678/api/v1
+      N8N_API_KEY: ${N8N_API_KEY:-}
+      N8N_WEBHOOK_URL: https://n8n.cham164.id.vn/
+      AI_SERVICE_URL: http://ai:5001
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend/uploads:/app/uploads
+
+  frontend:
+    build: ./frontend
+    container_name: riceguard-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: https://api.cham164.id.vn/api
+    ports:
+      - "3000:3000"
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: riceguard-n8n
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: riceguard
+      DB_POSTGRESDB_USER: riceguard_user
+      DB_POSTGRESDB_PASSWORD: ${DB_PASSWORD:-riceguard_secret}
+      N8N_HOST: n8n.cham164.id.vn
+      N8N_PORT: 5678
+      N8N_PROTOCOL: https
+      WEBHOOK_URL: https://n8n.cham164.id.vn/
+      N8N_WEBHOOK_URL: https://n8n.cham164.id.vn/
+      GENERIC_TIMEZONE: Asia/Ho_Chi_Minh
+      TZ: Asia/Ho_Chi_Minh
+      N8N_RUNNERS_ENABLED: "true"
+      N8N_RUNNERS_MODE: internal
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+volumes:
+  pgdata:
+  n8n_data:

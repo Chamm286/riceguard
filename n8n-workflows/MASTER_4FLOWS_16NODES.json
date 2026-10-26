@@ -14,8 +14,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          -460,
-          -120
+          180,
+          240
         ]
       },
       {
@@ -29,8 +29,8 @@
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
         "position": [
-          -400,
-          0
+          200,
+          300
         ],
         "webhookId": "security-event"
       },
@@ -46,8 +46,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          -180,
-          -120
+          580,
+          240
         ]
       },
       {
@@ -110,8 +110,8 @@
         "type": "n8n-nodes-base.set",
         "typeVersion": 3.4,
         "position": [
-          -120,
-          0
+          400,
+          300
         ]
       },
       {
@@ -123,8 +123,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          160,
-          0
+          600,
+          300
         ]
       },
       {
@@ -149,8 +149,8 @@
         "type": "n8n-nodes-base.if",
         "typeVersion": 2,
         "position": [
-          420,
-          0
+          1000,
+          300
         ]
       },
       {
@@ -165,8 +165,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          360,
-          -120
+          1180,
+          140
         ]
       },
       {
@@ -182,8 +182,8 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          680,
-          -80
+          1200,
+          200
         ],
         "credentials": {
           "postgres": {
@@ -205,8 +205,8 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          920,
-          -80
+          1800,
+          200
         ],
         "credentials": {
           "postgres": {
@@ -237,8 +237,8 @@
         "type": "n8n-nodes-base.if",
         "typeVersion": 2,
         "position": [
-          1160,
-          -80
+          2200,
+          200
         ]
       },
       {
@@ -254,9 +254,10 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4,
         "position": [
-          1400,
-          -120
-        ]
+          2400,
+          100
+        ],
+        "continueOnFail": true
       },
       {
         "parameters": {
@@ -269,8 +270,8 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          1400,
-          40
+          2400,
+          300
         ],
         "credentials": {
           "postgres": {
@@ -282,7 +283,7 @@
       {
         "parameters": {
           "chatId": "7893336271",
-          "text": "=🚨 {{ $('🧠 Detect Attack').first().json.attack_type }} từ {{ $('🧠 Detect Attack').first().json.ip }}\\nSố lần 1h: {{ $('🗄️ Count 1h').first().json.n }}",
+          "text": "={{ '<b>🚨 CẢNH BÁO AN NINH MẠNG</b>\\n' + '━━━━━━━━━━━━━━━━━━━━\\n' + '<b>Loại tấn công:</b> ' + $('🧠 Detect Attack').first().json.attack_type + '\\n' + '<b>IP kẻ tấn công:</b> ' + $('🧠 Detect Attack').first().json.ip + '\\n' + '<b>Quốc gia:</b> ' + ($('🌍 GeoIP Lookup').first().json.country || 'N/A') + '\\n' + '<b>Mục tiêu:</b> ' + $('🔧 Normalize Data').first().json.path + '\\n' + '<b>Số lần 1h:</b> ' + $('🗄️ Count 1h').first().json.n + '\\n' + '<b>Mức độ:</b> ' + $('⬆️ Severity Escalation').first().json.severity.toUpperCase() + '\\n' + '━━━━━━━━━━━━━━━━━━━━\\n' + '<b>Hành động:</b> ' + ($('🚫 Block IP').first().json.status || 'Đang xử lý') + '\\n' + '<b>Thời gian:</b> ' + new Date().toLocaleString('vi-VN') }}",
           "additionalFields": {
             "parse_mode": "HTML"
           }
@@ -292,8 +293,8 @@
         "type": "n8n-nodes-base.telegram",
         "typeVersion": 1,
         "position": [
-          1640,
-          -40
+          2800,
+          100
         ],
         "credentials": {
           "telegramApi": {
@@ -316,9 +317,10 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4,
         "position": [
-          1880,
-          -40
-        ]
+          3400,
+          200
+        ],
+        "continueOnFail": true
       },
       {
         "parameters": {
@@ -330,8 +332,8 @@
         "type": "n8n-nodes-base.respondToWebhook",
         "typeVersion": 1,
         "position": [
-          2120,
-          -40
+          3600,
+          200
         ]
       },
       {
@@ -347,8 +349,8 @@
         "type": "n8n-nodes-base.telegram",
         "typeVersion": 1,
         "position": [
-          920,
-          220
+          2800,
+          400
         ],
         "credentials": {
           "telegramApi": {
@@ -357,6 +359,196 @@
           }
         },
         "continueOnFail": true
+      },
+      {
+        "id": "n-whitelist",
+        "name": "Whitelist Check",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          460,
+          220
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": false,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.ip }}",
+                "rightValue": "127.0.0.1",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEquals"
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        }
+      },
+      {
+        "id": "n-geoip",
+        "name": "GeoIP Lookup",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          720,
+          180
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "http://ip-api.com/json/{{ $json.ip_address }}?fields=status,country,city,lat,lon,isp",
+          "options": {}
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-reputation",
+        "name": "IP Reputation",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          860,
+          180
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "https://api.abuseipdb.com/api/v2/check?ipAddress={{ $json.ip_address }}",
+          "options": {
+            "headers": {
+              "Key": "demo"
+            }
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-ai",
+        "name": "AI Threat Analysis",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1000,
+          180
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5001/api/analyze",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ip: $json.ip_address, attack: $json.attack_type, count: $json.count_1h}) }}",
+          "options": {}
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-escalation",
+        "name": "Severity Escalation",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1140,
+          100
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nif(item.count_1h>=10)item.severity='critical';\nelse if(item.count_1h>=5)item.severity='high';\nitem.escalated=true;\nreturn [{json:item}];"
+        }
+      },
+      {
+        "id": "n-secondary",
+        "name": "Secondary Notify",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          1280,
+          180
+        ],
+        "parameters": {
+          "chatId": "7893336271",
+          "text": "={{ '<b>⚠️ THÔNG BÁO PHỤ</b>\\n' + '━━━━━━━━━━━━━━━━━━━━\\n' + '<b>Alert:</b> ' + $json.attack_type + '\\n' + '<b>IP:</b> ' + $json.ip_address + '\\n' + '<b>Severity:</b> ' + $json.severity + '\\n' + '<b>Time:</b> ' + new Date().toLocaleString('vi-VN') }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
+        },
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-audit",
+        "name": "Detailed Audit Log",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1420,
+          180
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5000/api/n8n/log",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({source:'soc-alert-triage',event_type:$json.attack_type,severity:$json.severity,ip_address:$json.ip_address,message:'Processed alert',raw_data:$json}) }}",
+          "options": {}
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "gn-soc-1",
+        "name": "📥 Tiếp nhận & Phát hiện",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          180,
+          240
+        ],
+        "parameters": {
+          "content": "## Tiếp nhận & Phát hiện\nWebhook → Normalize → Detect → Whitelist",
+          "height": 120,
+          "width": 660,
+          "color": 4
+        }
+      },
+      {
+        "id": "gn-soc-2",
+        "name": "🗄️ Database & Phân tích",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          1180,
+          140
+        ],
+        "parameters": {
+          "content": "## Database & Phân tích\nSave → GeoIP → Reputation → Count → AI",
+          "height": 120,
+          "width": 1000,
+          "color": 6
+        }
+      },
+      {
+        "id": "gn-soc-3",
+        "name": "📤 Phản hồi & Thông báo",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          2380,
+          40
+        ],
+        "parameters": {
+          "content": "## Phản hồi & Thông báo\nBlock/Update → Notify → Audit → Log → Respond",
+          "height": 120,
+          "width": 1400,
+          "color": 7
+        }
       }
     ],
     "connections": {
@@ -386,7 +578,7 @@
         "main": [
           [
             {
-              "node": "🔀 Detected?",
+              "node": "Whitelist Check",
               "type": "main",
               "index": 0
             }
@@ -415,7 +607,7 @@
         "main": [
           [
             {
-              "node": "🗄️ Count 1h",
+              "node": "GeoIP Lookup",
               "type": "main",
               "index": 0
             }
@@ -426,7 +618,7 @@
         "main": [
           [
             {
-              "node": "🔀 Repeat ≥5?",
+              "node": "AI Threat Analysis",
               "type": "main",
               "index": 0
             }
@@ -455,7 +647,7 @@
         "main": [
           [
             {
-              "node": "🔔 Notify Telegram",
+              "node": "Severity Escalation",
               "type": "main",
               "index": 0
             }
@@ -477,7 +669,7 @@
         "main": [
           [
             {
-              "node": "📝 Log Workflow",
+              "node": "Secondary Notify",
               "type": "main",
               "index": 0
             }
@@ -489,6 +681,90 @@
           [
             {
               "node": "📤 Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Whitelist Check": {
+        "main": [
+          [
+            {
+              "node": "🔀 Detected?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📝 Log Workflow",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "GeoIP Lookup": {
+        "main": [
+          [
+            {
+              "node": "IP Reputation",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "IP Reputation": {
+        "main": [
+          [
+            {
+              "node": "🗄️ Count 1h",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "AI Threat Analysis": {
+        "main": [
+          [
+            {
+              "node": "🔀 Repeat ≥5?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Severity Escalation": {
+        "main": [
+          [
+            {
+              "node": "🔔 Notify Telegram",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Secondary Notify": {
+        "main": [
+          [
+            {
+              "node": "Detailed Audit Log",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Detailed Audit Log": {
+        "main": [
+          [
+            {
+              "node": "📝 Log Workflow",
               "type": "main",
               "index": 0
             }
@@ -514,8 +790,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          -460,
-          -120
+          180,
+          240
         ]
       },
       {
@@ -529,8 +805,8 @@
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
         "position": [
-          -400,
-          0
+          200,
+          300
         ],
         "webhookId": "new-report"
       },
@@ -546,8 +822,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          -180,
-          -120
+          580,
+          240
         ]
       },
       {
@@ -580,8 +856,8 @@
         "type": "n8n-nodes-base.set",
         "typeVersion": 3.4,
         "position": [
-          -120,
-          0
+          400,
+          300
         ]
       },
       {
@@ -600,9 +876,10 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4,
         "position": [
-          160,
-          0
-        ]
+          1200,
+          300
+        ],
+        "continueOnFail": true
       },
       {
         "parameters": {
@@ -613,8 +890,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          420,
-          0
+          1400,
+          300
         ]
       },
       {
@@ -630,9 +907,10 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4,
         "position": [
-          680,
-          0
-        ]
+          1600,
+          300
+        ],
+        "continueOnFail": true
       },
       {
         "parameters": {
@@ -643,8 +921,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          920,
-          0
+          1800,
+          300
         ]
       },
       {
@@ -659,8 +937,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          860,
-          -120
+          1180,
+          240
         ]
       },
       {
@@ -676,8 +954,8 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          1160,
-          -80
+          2200,
+          300
         ],
         "credentials": {
           "postgres": {
@@ -699,8 +977,8 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          1160,
-          80
+          2400,
+          300
         ],
         "credentials": {
           "postgres": {
@@ -731,13 +1009,13 @@
         "type": "n8n-nodes-base.if",
         "typeVersion": 2,
         "position": [
-          1400,
-          0
+          3000,
+          300
         ]
       },
       {
         "parameters": {
-          "chatId": "={{ $('🗄️ Query Farmer').first().json.telegram_chat_id || '7893336271' }}",
+          "chatId": "7893336271",
           "text": "=🌾 Báo cáo #{{ $('🧠 Parse AI').first().json.report_id }}\\nBệnh: {{ $('🧠 Parse AI').first().json.disease }}\\nMức độ: {{ $('🧠 Parse AI').first().json.severity }}",
           "additionalFields": {
             "parse_mode": "HTML"
@@ -748,8 +1026,8 @@
         "type": "n8n-nodes-base.telegram",
         "typeVersion": 1,
         "position": [
-          1640,
-          -40
+          3200,
+          200
         ],
         "credentials": {
           "telegramApi": {
@@ -772,9 +1050,10 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4,
         "position": [
-          1880,
-          -40
-        ]
+          3200,
+          400
+        ],
+        "continueOnFail": true
       },
       {
         "parameters": {
@@ -786,8 +1065,8 @@
         "type": "n8n-nodes-base.respondToWebhook",
         "typeVersion": 1,
         "position": [
-          2120,
-          -40
+          3400,
+          300
         ]
       },
       {
@@ -813,6 +1092,175 @@
           }
         },
         "continueOnFail": true
+      },
+      {
+        "id": "n-validate",
+        "name": "Validate Image",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          300,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nif(!item.image_url)throw new Error('Missing image_url');\nitem.validated=true;\nreturn [{json:item}];"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-dedupe",
+        "name": "Deduplicate Report",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          420,
+          200
+        ],
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT id FROM reports WHERE image_url=$1 LIMIT 1",
+          "options": {}
+        },
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-weather",
+        "name": "Weather Context",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          540,
+          200
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "http://localhost:5000/api/weather?field_id={{ $json.field_id }}",
+          "options": {}
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-treatment",
+        "name": "Treatment Plan",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          660,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nconst disease=item.ai_disease||'unknown';\nitem.treatment=disease==='leaf_blight'?'Phun Copper Oxychloride 0.3%':'Theo doi them';\nitem.prevention='Tang cuong thoat nuoc, bon phan can doi';\nreturn [{json:item}];"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-notify-farmer",
+        "name": "Notify Farmer TG",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          780,
+          200
+        ],
+        "parameters": {
+          "chatId": "7893336271",
+          "text": "={{ 'Chan doan: '+$json.ai_disease+' - Muc do: '+$json.ai_severity+'\\nDieu tri: '+$json.treatment }}",
+          "additionalFields": {}
+        },
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-audit-rice",
+        "name": "Audit Rice Log",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          900,
+          200
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5000/api/n8n/log",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({source:'rice-disease-diagnosis',event_type:'diagnosis',severity:$json.ai_severity,ip_address:'system',message:$json.ai_disease,raw_data:$json}) }}",
+          "options": {}
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-retry",
+        "name": "Retry on Error",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1020,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nitem.retry_count=(item.retry_count||0)+1;\nif(item.retry_count>3)throw new Error('Max retries exceeded');\nreturn [{json:item}];"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "gn-rice-1",
+        "name": "📥 Tiếp nhận",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          180,
+          240
+        ],
+        "parameters": {
+          "content": "## Tiếp nhận\nWebhook → Normalize → Validate → Dedupe → Weather",
+          "height": 120,
+          "width": 860,
+          "color": 4
+        }
+      },
+      {
+        "id": "gn-rice-2",
+        "name": "🧠 Gọi AI",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          1180,
+          240
+        ],
+        "parameters": {
+          "content": "## Gọi AI\nDownload → Encode → AI Analyze → Parse → Treatment",
+          "height": 120,
+          "width": 860,
+          "color": 5
+        }
+      },
+      {
+        "id": "gn-rice-3",
+        "name": "🗄️ Database & Thông báo",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          2180,
+          240
+        ],
+        "parameters": {
+          "content": "## Database & Thông báo\nUpdate → Query → Notify → Audit → Severity → Respond",
+          "height": 120,
+          "width": 1400,
+          "color": 6
+        }
       }
     ],
     "connections": {
@@ -875,7 +1323,7 @@
         "main": [
           [
             {
-              "node": "🗄️ Update Report",
+              "node": "Treatment Plan",
               "type": "main",
               "index": 0
             }
@@ -897,7 +1345,7 @@
         "main": [
           [
             {
-              "node": "🔀 Severity High?",
+              "node": "Notify Farmer TG",
               "type": "main",
               "index": 0
             }
@@ -943,6 +1391,88 @@
             }
           ]
         ]
+      },
+      "Validate Image": {
+        "main": [
+          [
+            {
+              "node": "Deduplicate Report",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Deduplicate Report": {
+        "main": [
+          [
+            {
+              "node": "Weather Context",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Weather Context": {
+        "main": [
+          [
+            {
+              "node": "🧠 Parse AI",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Treatment Plan": {
+        "main": [
+          [
+            {
+              "node": "🗄️ Update Report",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Notify Farmer TG": {
+        "main": [
+          [
+            {
+              "node": "Audit Rice Log",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Audit Rice Log": {
+        "main": [
+          [
+            {
+              "node": "🔀 Severity High?",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Retry on Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Retry on Error": {
+        "main": [
+          [
+            {
+              "node": "📤 Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "active": true,
@@ -963,8 +1493,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          -460,
-          -120
+          180,
+          240
         ]
       },
       {
@@ -984,8 +1514,8 @@
         "type": "n8n-nodes-base.scheduleTrigger",
         "typeVersion": 1,
         "position": [
-          -400,
-          0
+          200,
+          100
         ]
       },
       {
@@ -1000,8 +1530,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          -180,
-          -120
+          580,
+          240
         ]
       },
       {
@@ -1017,9 +1547,10 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4,
         "position": [
-          -120,
-          0
-        ]
+          400,
+          300
+        ],
+        "continueOnFail": true
       },
       {
         "parameters": {
@@ -1030,8 +1561,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          160,
-          0
+          600,
+          300
         ]
       },
       {
@@ -1043,8 +1574,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          420,
-          0
+          1000,
+          300
         ]
       },
       {
@@ -1059,8 +1590,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          360,
-          -120
+          1380,
+          240
         ]
       },
       {
@@ -1076,8 +1607,8 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          680,
-          -80
+          1400,
+          300
         ],
         "credentials": {
           "postgres": {
@@ -1099,8 +1630,8 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          920,
-          -80
+          1600,
+          300
         ],
         "credentials": {
           "postgres": {
@@ -1122,8 +1653,8 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          1160,
-          -80
+          1800,
+          300
         ],
         "credentials": {
           "postgres": {
@@ -1154,8 +1685,8 @@
         "type": "n8n-nodes-base.if",
         "typeVersion": 2,
         "position": [
-          1400,
-          -80
+          2000,
+          300
         ]
       },
       {
@@ -1171,8 +1702,8 @@
         "type": "n8n-nodes-base.telegram",
         "typeVersion": 1,
         "position": [
-          1640,
-          -120
+          2400,
+          200
         ],
         "credentials": {
           "telegramApi": {
@@ -1195,8 +1726,8 @@
         "type": "n8n-nodes-base.telegram",
         "typeVersion": 1,
         "position": [
-          1640,
-          40
+          2400,
+          400
         ],
         "credentials": {
           "telegramApi": {
@@ -1219,9 +1750,10 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4,
         "position": [
-          1880,
-          -40
-        ]
+          3000,
+          300
+        ],
+        "continueOnFail": true
       },
       {
         "parameters": {
@@ -1233,8 +1765,8 @@
         "type": "n8n-nodes-base.respondToWebhook",
         "typeVersion": 1,
         "position": [
-          2120,
-          -40
+          3200,
+          300
         ]
       },
       {
@@ -1272,9 +1804,156 @@
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
         "position": [
-          -400,
-          -180
+          200,
+          300
         ]
+      },
+      {
+        "id": "n-validate-s",
+        "name": "Validate Data",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          600,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const items=$input.all();\nfor(const i of items){if(!i.json.field_id)throw new Error('Missing field_id');}\nreturn items;"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-anomaly",
+        "name": "Anomaly Detection",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          800,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nconst ndvi=item.ndvi_avg||0;\nitem.anomaly=ndvi<0.3?'low_ndvi':ndvi>0.9?'high_ndvi':'normal';\nitem.risk_score=ndvi<0.3?0.8:0.2;\nreturn [{json:item}];"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-multi-field",
+        "name": "Multi-Field Process",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1200,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const items=$input.all();\nreturn items.map(i=>({json:{...i.json,processed:true,processed_at:new Date().toISOString()}}));"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-alert-gen",
+        "name": "Generate Alert",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          2200,
+          200
+        ],
+        "parameters": {
+          "operation": "insert",
+          "schema": "public",
+          "table": "alerts",
+          "columns": "alert_type,severity,title,description,ip_address,status",
+          "additionalFields": {}
+        },
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-retry-s",
+        "name": "Retry Sync",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2600,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nitem.retry_count=(item.retry_count||0)+1;\nif(item.retry_count>3)throw new Error('Max retries');\nreturn [{json:item}];"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-audit-s",
+        "name": "Audit Sentinel Log",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2800,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5000/api/n8n/log",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({source:'sentinel-2-sync',event_type:'satellite_sync',severity:'info',ip_address:'system',message:'Synced',raw_data:$json}) }}",
+          "options": {}
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "gn-sent-1",
+        "name": "📥 Tiếp nhận",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          180,
+          240
+        ],
+        "parameters": {
+          "content": "## Tiếp nhận\nWebhook/Cron → Call GEE/AI",
+          "height": 120,
+          "width": 260,
+          "color": 4
+        }
+      },
+      {
+        "id": "gn-sent-2",
+        "name": "🧠 Xử lý",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          580,
+          240
+        ],
+        "parameters": {
+          "content": "## Xử lý\nValidate → Anomaly → Parse → Multi-Field",
+          "height": 120,
+          "width": 800,
+          "color": 5
+        }
+      },
+      {
+        "id": "gn-sent-3",
+        "name": "🗄️ Database & Phản hồi",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          1380,
+          240
+        ],
+        "parameters": {
+          "content": "## Database & Phản hồi\nSave Feature/Prediction/Field → NDVI Low? → Notify/Audit → Respond",
+          "height": 120,
+          "width": 2000,
+          "color": 6
+        }
       }
     ],
     "connections": {
@@ -1304,7 +1983,7 @@
         "main": [
           [
             {
-              "node": "🧠 Parse Result",
+              "node": "Validate Data",
               "type": "main",
               "index": 0
             }
@@ -1416,6 +2095,72 @@
             }
           ]
         ]
+      },
+      "Validate Data": {
+        "main": [
+          [
+            {
+              "node": "Anomaly Detection",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Anomaly Detection": {
+        "main": [
+          [
+            {
+              "node": "Multi-Field Process",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Multi-Field Process": {
+        "main": [
+          [
+            {
+              "node": "Generate Alert",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Generate Alert": {
+        "main": [
+          [
+            {
+              "node": "Retry Sync",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Retry Sync": {
+        "main": [
+          [
+            {
+              "node": "Audit Sentinel Log",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Audit Sentinel Log": {
+        "main": [
+          [
+            {
+              "node": "🧠 Parse Result",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "active": true,
@@ -1436,8 +2181,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          -460,
-          -120
+          180,
+          240
         ]
       },
       {
@@ -1457,8 +2202,8 @@
         "type": "n8n-nodes-base.scheduleTrigger",
         "typeVersion": 1,
         "position": [
-          -400,
-          0
+          200,
+          100
         ]
       },
       {
@@ -1473,8 +2218,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          -180,
-          -120
+          380,
+          240
         ]
       },
       {
@@ -1487,8 +2232,8 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          -120,
-          0
+          400,
+          300
         ],
         "credentials": {
           "postgres": {
@@ -1507,8 +2252,8 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          -120,
-          160
+          600,
+          300
         ],
         "credentials": {
           "postgres": {
@@ -1526,8 +2271,8 @@
         "type": "n8n-nodes-base.merge",
         "typeVersion": 2,
         "position": [
-          160,
-          80
+          800,
+          300
         ]
       },
       {
@@ -1555,14 +2300,14 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          360,
-          -120
+          980,
+          240
         ]
       },
       {
         "parameters": {
           "chatId": "7893336271",
-          "text": "={{ $json.msg }}",
+          "text": "={{ '<b>📊 BÁO CÁO BẢO MẬT HÀNG NGÀY</b>\\n' + '━━━━━━━━━━━━━━━━━━━━\\n' + '<b>Thời gian:</b> ' + new Date().toLocaleString('vi-VN') + '\\n' + '<b>Tổng cảnh báo:</b> ' + ($('📊 Aggregate Stats').first().json.total || 0) + '\\n' + '<b>Xu hướng:</b> ' + ($('📈 Trend Analysis').first().json.trend || 'N/A') + '\\n' + '<b>Mức rủi ro:</b> ' + ($('📈 Trend Analysis').first().json.risk_level || 'N/A') + '\\n' + '━━━━━━━━━━━━━━━━━━━━\\n' + '<i>RiceGuard Security Platform</i>' }}",
           "additionalFields": {
             "parse_mode": "HTML"
           }
@@ -1572,8 +2317,8 @@
         "type": "n8n-nodes-base.telegram",
         "typeVersion": 1,
         "position": [
-          680,
-          40
+          1600,
+          300
         ],
         "credentials": {
           "telegramApi": {
@@ -1596,8 +2341,8 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2,
         "position": [
-          920,
-          40
+          2400,
+          300
         ],
         "credentials": {
           "postgres": {
@@ -1619,9 +2364,10 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4,
         "position": [
-          1160,
-          40
-        ]
+          2600,
+          300
+        ],
+        "continueOnFail": true
       },
       {
         "parameters": {
@@ -1633,8 +2379,8 @@
         "type": "n8n-nodes-base.respondToWebhook",
         "typeVersion": 1,
         "position": [
-          1400,
-          40
+          2800,
+          300
         ]
       },
       {
@@ -1649,8 +2395,8 @@
         "type": "n8n-nodes-base.stickyNote",
         "typeVersion": 1,
         "position": [
-          680,
-          -260
+          1580,
+          440
         ]
       },
       {
@@ -1666,8 +2412,8 @@
         "type": "n8n-nodes-base.telegram",
         "typeVersion": 1,
         "position": [
-          920,
-          -200
+          1600,
+          500
         ],
         "credentials": {
           "telegramApi": {
@@ -1686,8 +2432,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          -120,
-          -120
+          400,
+          100
         ]
       },
       {
@@ -1701,9 +2447,151 @@
         "type": "n8n-nodes-base.webhook",
         "typeVersion": 1,
         "position": [
-          -400,
-          -180
+          200,
+          300
         ]
+      },
+      {
+        "id": "n-aggregate",
+        "name": "Aggregate Stats",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          300,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const items=$input.all();\nconst total=items.reduce((s,i)=>s+(i.json.count||0),0);\nreturn [{json:{total,items:items.map(i=>i.json),generated_at:new Date().toISOString()}}];"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-trend",
+        "name": "Trend Analysis",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          420,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nitem.trend=item.total>10?'increasing':item.total>5?'stable':'decreasing';\nitem.risk_level=item.total>20?'critical':item.total>10?'high':'medium';\nreturn [{json:item}];"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-format",
+        "name": "Format Report",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1400,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nitem.report_text='Daily Report\\nTotal: '+item.total+'\\nTrend: '+item.trend+'\\nRisk: '+item.risk_level+'\\nGenerated: '+item.generated_at;\nreturn [{json:item}];"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-email",
+        "name": "Email Report",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1800,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5000/api/n8n/log",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({source:'daily-security-report',event_type:'daily_report',severity:'info',ip_address:'system',message:$json.report_text,raw_data:$json}) }}",
+          "options": {}
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-retry-d",
+        "name": "Retry Report",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          2000,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nitem.retry_count=(item.retry_count||0)+1;\nif(item.retry_count>3)throw new Error('Max retries');\nreturn [{json:item}];"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-audit-d",
+        "name": "Audit Daily Log",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          2200,
+          300
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5000/api/n8n/log",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({source:'daily-security-report',event_type:'audit',severity:'info',ip_address:'system',message:'Report generated',raw_data:$json}) }}",
+          "options": {}
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "gn-daily-1",
+        "name": "📥 Tiếp nhận",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          180,
+          240
+        ],
+        "parameters": {
+          "content": "## Tiếp nhận\nCron/Webhook → Health Check",
+          "height": 120,
+          "width": 260,
+          "color": 4
+        }
+      },
+      {
+        "id": "gn-daily-2",
+        "name": "🗄️ Thống kê",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          380,
+          240
+        ],
+        "parameters": {
+          "content": "## Thu thập dữ liệu\nStats 24h → Top 5 IP → Merge",
+          "height": 120,
+          "width": 600,
+          "color": 5
+        }
+      },
+      {
+        "id": "gn-daily-3",
+        "name": "📊 Báo cáo & Gửi",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          980,
+          240
+        ],
+        "parameters": {
+          "content": "## Phân tích & Gửi\nAggregate → Trend → Format → Notify → Email → Audit → Save → Respond",
+          "height": 120,
+          "width": 2000,
+          "color": 6
+        }
       }
     ],
     "connections": {
@@ -1754,7 +2642,7 @@
         "main": [
           [
             {
-              "node": "🧠 Format Report",
+              "node": "Aggregate Stats",
               "type": "main",
               "index": 0
             }
@@ -1776,7 +2664,7 @@
         "main": [
           [
             {
-              "node": "🗄️ Save Summary",
+              "node": "Email Report",
               "type": "main",
               "index": 0
             }
@@ -1825,9 +2713,555 @@
             }
           ]
         ]
+      },
+      "Aggregate Stats": {
+        "main": [
+          [
+            {
+              "node": "Trend Analysis",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Trend Analysis": {
+        "main": [
+          [
+            {
+              "node": "Format Report",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Email Report": {
+        "main": [
+          [
+            {
+              "node": "Retry Report",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Retry Report": {
+        "main": [
+          [
+            {
+              "node": "Audit Daily Log",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Audit Daily Log": {
+        "main": [
+          [
+            {
+              "node": "🗄️ Save Summary",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
       }
     },
     "active": true,
     "id": "36e021f2-3cfc-48fa-9e63-ee909498d4eb"
+  },
+  {
+    "name": "🤖 AI Chat Assistant",
+    "nodes": [
+      {
+        "id": "w1",
+        "name": "📥 Webhook - AI Chat",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 2,
+        "position": [
+          200,
+          300
+        ],
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "ai-chat",
+          "responseMode": "responseNode",
+          "options": {}
+        }
+      },
+      {
+        "id": "n1",
+        "name": "🔧 Normalize Input",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          400,
+          300
+        ],
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "a1",
+                "name": "message",
+                "value": "={{ $json.body.message || $json.message }}",
+                "type": "string"
+              },
+              {
+                "id": "a2",
+                "name": "user_id",
+                "value": "={{ $json.body.user_id || 'anonymous' }}",
+                "type": "string"
+              },
+              {
+                "id": "a3",
+                "name": "timestamp",
+                "value": "={{ new Date().toISOString() }}",
+                "type": "string"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "n2",
+        "name": "🧠 Classify Intent",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          600,
+          300
+        ],
+        "parameters": {
+          "jsCode": "const msg=($input.first().json.message||'').toLowerCase();\nlet intent='general';\nif(msg.includes('alert')||msg.includes('cảnh báo'))intent='alerts';\nelse if(msg.includes('threat')||msg.includes('đe dọa'))intent='threats';\nelse if(msg.includes('ip')||msg.includes('block'))intent='firewall';\nelse if(msg.includes('risk')||msg.includes('rủi ro'))intent='risk';\nelse if(msg.includes('visitor')||msg.includes('truy cập'))intent='visitors';\nconst item=$input.first().json;\nitem.intent=intent;\nreturn [{json:item}];"
+        }
+      },
+      {
+        "id": "n3",
+        "name": "🔀 Intent Router",
+        "type": "n8n-nodes-base.switch",
+        "typeVersion": 3,
+        "position": [
+          800,
+          300
+        ],
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "outputKey": "alerts",
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.intent }}",
+                      "rightValue": "alerts",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "outputKey": "threats",
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.intent }}",
+                      "rightValue": "threats",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "outputKey": "firewall",
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.intent }}",
+                      "rightValue": "firewall",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "outputKey": "risk",
+                "conditions": {
+                  "options": {
+                    "caseSensitive": false
+                  },
+                  "conditions": [
+                    {
+                      "leftValue": "={{ $json.intent }}",
+                      "rightValue": "risk",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "n4",
+        "name": "🗄️ Query Alerts",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          1000,
+          100
+        ],
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE status='new')::int AS new_count, COUNT(*) FILTER (WHERE LOWER(severity)='critical')::int AS critical FROM alerts",
+          "options": {}
+        },
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "id": "n5",
+        "name": "🗄️ Query Threats",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          1000,
+          200
+        ],
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE status='blocked')::int AS blocked FROM threats",
+          "options": {}
+        },
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "id": "n6",
+        "name": "🗄️ Query Firewall",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          1000,
+          300
+        ],
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COUNT(*)::int AS blocked_ips FROM blocked_ips",
+          "options": {}
+        },
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "id": "n7",
+        "name": "🗄️ Query Risk",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          1000,
+          400
+        ],
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COUNT(*) FILTER (WHERE LOWER(severity)='critical' AND status<>'resolved')::int AS critical_open FROM alerts",
+          "options": {}
+        },
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "id": "n8",
+        "name": "🧠 Format Response",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1200,
+          250
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nconst msg=item.message||'';\nlet reply='Xin chào! Tôi là RiceGuard AI.';\nif(item.intent==='alerts') reply='Hiện có '+ (item.total||0)+' cảnh báo, '+ (item.new_count||0)+' chưa xử lý, '+(item.critical||0)+' mức critical.';\nelse if(item.intent==='threats') reply='Có '+(item.total||0)+' mối đe dọa, '+(item.blocked||0)+' IP đã bị chặn.';\nelse if(item.intent==='firewall') reply='Hệ thống đã chặn '+(item.blocked_ips||0)+' IP.';\nelse if(item.intent==='risk') reply='Mức rủi ro: '+(item.critical_open||0)+' cảnh báo critical chưa giải quyết.';\nelse reply='Tôi có thể giúp bạn về cảnh báo, mối đe dọa, IP bị chặn, và rủi ro hệ thống.';\nreturn [{json:{reply,timestamp:new Date().toISOString(),intent:item.intent}}];"
+        }
+      },
+      {
+        "id": "n9",
+        "name": "📝 Log Chat",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1400,
+          250
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5000/api/n8n/log",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({workflow_id:'ai-chat-assistant',status:'success',execution_count:1,message:$json.reply}) }}",
+          "options": {}
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n10",
+        "name": "📤 Respond",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1.1,
+        "position": [
+          1600,
+          250
+        ],
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ JSON.stringify({success:true,data:{reply:$json.reply,timestamp:$json.timestamp}}) }}"
+        }
+      },
+      {
+        "id": "n11",
+        "name": "❌ Error Handler",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          1200,
+          400
+        ],
+        "parameters": {
+          "chatId": "7893336271",
+          "text": "={{ 'AI Chat error: ' + $json.message }}",
+          "additionalFields": {}
+        },
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "gn-ai-1",
+        "name": "📥 Tiếp nhận",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          180,
+          240
+        ],
+        "parameters": {
+          "content": "## Tiếp nhận câu hỏi\nWebhook → Normalize → Classify Intent → Router",
+          "height": 120,
+          "width": 660,
+          "color": 4
+        }
+      },
+      {
+        "id": "gn-ai-2",
+        "name": "🗄️ Truy vấn DB",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          980,
+          40
+        ],
+        "parameters": {
+          "content": "## Truy vấn Database\nQuery Alerts/Threats/Firewall/Risk theo intent",
+          "height": 420,
+          "width": 260,
+          "color": 5
+        }
+      },
+      {
+        "id": "gn-ai-3",
+        "name": "🧠 Phản hồi",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          1180,
+          190
+        ],
+        "parameters": {
+          "content": "## Phản hồi\nFormat → Log → Respond",
+          "height": 120,
+          "width": 600,
+          "color": 6
+        }
+      }
+    ],
+    "connections": {
+      "📥 Webhook - AI Chat": {
+        "main": [
+          [
+            {
+              "node": "🔧 Normalize Input",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Normalize Input": {
+        "main": [
+          [
+            {
+              "node": "🧠 Classify Intent",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🧠 Classify Intent": {
+        "main": [
+          [
+            {
+              "node": "🔀 Intent Router",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 Intent Router": {
+        "main": [
+          [
+            {
+              "node": "🗄️ Query Alerts",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🗄️ Query Threats",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🗄️ Query Firewall",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🗄️ Query Risk",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Query Alerts": {
+        "main": [
+          [
+            {
+              "node": "🧠 Format Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Query Threats": {
+        "main": [
+          [
+            {
+              "node": "🧠 Format Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Query Firewall": {
+        "main": [
+          [
+            {
+              "node": "🧠 Format Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Query Risk": {
+        "main": [
+          [
+            {
+              "node": "🧠 Format Response",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🧠 Format Response": {
+        "main": [
+          [
+            {
+              "node": "📝 Log Chat",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📝 Log Chat": {
+        "main": [
+          [
+            {
+              "node": "📤 Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "active": true,
+    "id": "ai-chat-assistant"
   }
 ]

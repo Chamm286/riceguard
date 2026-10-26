@@ -1,0 +1,2582 @@
+[
+  {
+    "name": "🟢 SOC Alert Triage",
+    "nodes": [
+      {
+        "parameters": {
+          "content": "## 📥 TIẾP NHẬN\nNhận security event",
+          "height": 260,
+          "width": 260,
+          "color": 4
+        },
+        "id": "📌 Note 1",
+        "name": "📌 Note 1",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -460,
+          -120
+        ]
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "security-event",
+          "options": {}
+        },
+        "id": "w1",
+        "name": "📥 Webhook - Security Event",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          -400,
+          0
+        ],
+        "webhookId": "security-event"
+      },
+      {
+        "parameters": {
+          "content": "## 🔍 XỬ LÝ\nPhân tích tấn công",
+          "height": 260,
+          "width": 260,
+          "color": 5
+        },
+        "id": "📌 Note 2",
+        "name": "📌 Note 2",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -180,
+          -120
+        ]
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "a1",
+                "name": "ip",
+                "value": "={{ $json.body.ip }}",
+                "type": "string"
+              },
+              {
+                "id": "a2",
+                "name": "payload",
+                "value": "={{ $json.body.payload }}",
+                "type": "string"
+              },
+              {
+                "id": "a3",
+                "name": "path",
+                "value": "={{ $json.body.path }}",
+                "type": "string"
+              },
+              {
+                "id": "a4",
+                "name": "type",
+                "value": "={{ $json.body.type || 'security_event' }}",
+                "type": "string"
+              },
+              {
+                "id": "a5",
+                "name": "severity",
+                "value": "={{ $json.body.severity || 'HIGH' }}",
+                "type": "string"
+              },
+              {
+                "id": "a6",
+                "name": "status",
+                "value": "={{ $json.body.status || 'NEW' }}",
+                "type": "string"
+              },
+              {
+                "id": "a7",
+                "name": "event_id",
+                "value": "={{ $json.body.event_id || '' }}",
+                "type": "string"
+              },
+              {
+                "id": "a8",
+                "name": "description",
+                "value": "={{ $json.body.payload || '' }}",
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "id": "n2",
+        "name": "🔧 Normalize Data",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          -120,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const raw=$input.first().json;const src=raw.body||raw;const ip=String(raw.ip || src?.source?.ip || src?.ip || '').trim();const type=String(raw.type || src?.threat_info?.type || 'security_event');const severity=String(raw.severity || src?.severity || 'HIGH').toUpperCase();const detected=true;return [{json:{detected,ip,attack_type:type,severity,title:`[${type}] từ ${ip}`,description:raw.payload||src?.threat_info?.description||'',status:raw.status||src?.status||'NEW',event_id:raw.event_id||src?.event_id}}];"
+        },
+        "id": "n3",
+        "name": "🧠 Detect Attack",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          160,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ true }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true"
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        },
+        "id": "n4",
+        "name": "🔀 Detected?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          420,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "content": "## 📤 PHẢN HỒI\nLưu DB + cảnh báo",
+          "height": 260,
+          "width": 260,
+          "color": 6
+        },
+        "id": "📌 Note 3",
+        "name": "📌 Note 3",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          360,
+          -120
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO alerts (alert_type,category,severity,title,description,ip_address,status) VALUES ($1,'security',LOWER($2),$3,$4,$5,'new') RETURNING id;",
+          "options": {
+            "queryReplacement": "={{ [$json.attack_type,$json.severity,$json.title,$json.description,$json.ip] }}"
+          }
+        },
+        "id": "n5",
+        "name": "🗄️ Save Alert",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2,
+        "position": [
+          680,
+          -80
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COUNT(*)::int AS n FROM alerts WHERE ip_address=$1 AND created_at > NOW() - INTERVAL '1 hour'",
+          "options": {
+            "queryReplacement": "={{ [$('🧠 Detect Attack').first().json.ip] }}"
+          }
+        },
+        "id": "n6",
+        "name": "🗄️ Count 1h",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2,
+        "position": [
+          920,
+          -80
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "conditions": [
+              {
+                "id": "c2",
+                "leftValue": "={{ $json.n }}",
+                "rightValue": 5,
+                "operator": {
+                  "type": "number",
+                  "operation": "gte"
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        },
+        "id": "n7",
+        "name": "🔀 Repeat ≥5?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1160,
+          -80
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5000/api/n8n/block-ip",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ ip_address: $('🧠 Detect Attack').first().json.ip, reason: $('🧠 Detect Attack').first().json.attack_type }) }}"
+        },
+        "id": "n8",
+        "name": "🚫 Block IP",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [
+          1400,
+          -120
+        ],
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "UPDATE alerts SET status = 'blocked', updated_at = NOW() WHERE id = {{ $('🗄️ Save Alert').item.json.id }};",
+          "options": {}
+        },
+        "id": "n9",
+        "name": "🗄️ Update Alert",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2,
+        "position": [
+          1400,
+          40
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "chatId": "7893336271",
+          "text": "=🚨 {{ $('🧠 Detect Attack').first().json.attack_type }} từ {{ $('🧠 Detect Attack').first().json.ip }}\\nSố lần 1h: {{ $('🗄️ Count 1h').first().json.n }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
+        },
+        "id": "n10",
+        "name": "🔔 Notify Telegram",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1,
+        "position": [
+          1640,
+          -40
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5000/api/n8n/log",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ workflow_id:'soc-alert-triage', status:'success', execution_count:1, message:'processed' }) }}"
+        },
+        "id": "n11",
+        "name": "📝 Log Workflow",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [
+          1880,
+          -40
+        ],
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ { ok:true, detected:$('🧠 Detect Attack').first().json.detected } }}"
+        },
+        "id": "n12",
+        "name": "📤 Respond",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          2120,
+          -40
+        ]
+      },
+      {
+        "parameters": {
+          "chatId": "7893336271",
+          "text": "=❌ Lỗi SOC Alert Triage: {{ $json.message }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
+        },
+        "id": "n13",
+        "name": "❌ Error Handler",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1,
+        "position": [
+          920,
+          220
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-whitelist",
+        "name": "Whitelist Check",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          460,
+          220
+        ],
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": false,
+              "leftValue": "",
+              "typeValidation": "strict"
+            },
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $json.ip }}",
+                "rightValue": "127.0.0.1",
+                "operator": {
+                  "type": "string",
+                  "operation": "notEquals"
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        }
+      },
+      {
+        "id": "n-geoip",
+        "name": "GeoIP Lookup",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          720,
+          180
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "http://ip-api.com/json/{{ $json.ip_address }}?fields=status,country,city,lat,lon,isp",
+          "options": {}
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-reputation",
+        "name": "IP Reputation",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          860,
+          180
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "https://api.abuseipdb.com/api/v2/check?ipAddress={{ $json.ip_address }}",
+          "options": {
+            "headers": {
+              "Key": "demo"
+            }
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-ai",
+        "name": "AI Threat Analysis",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1000,
+          180
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5001/api/analyze",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ip: $json.ip_address, attack: $json.attack_type, count: $json.count_1h}) }}",
+          "options": {}
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-escalation",
+        "name": "Severity Escalation",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1140,
+          100
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nif(item.count_1h>=10)item.severity='critical';\nelse if(item.count_1h>=5)item.severity='high';\nitem.escalated=true;\nreturn [{json:item}];"
+        }
+      },
+      {
+        "id": "n-secondary",
+        "name": "Secondary Notify",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          1280,
+          180
+        ],
+        "parameters": {
+          "chatId": "7893336271",
+          "text": "={{ 'Alert: '+$json.attack_type+' from '+$json.ip_address+' sev='+$json.severity }}",
+          "additionalFields": {}
+        },
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-audit",
+        "name": "Detailed Audit Log",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          1420,
+          180
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5000/api/n8n/log",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({source:'soc-alert-triage',event_type:$json.attack_type,severity:$json.severity,ip_address:$json.ip_address,message:'Processed alert',raw_data:$json}) }}",
+          "options": {}
+        },
+        "continueOnFail": true
+      }
+    ],
+    "connections": {
+      "📥 Webhook - Security Event": {
+        "main": [
+          [
+            {
+              "node": "🔧 Normalize Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Normalize Data": {
+        "main": [
+          [
+            {
+              "node": "🧠 Detect Attack",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🧠 Detect Attack": {
+        "main": [
+          [
+            {
+              "node": "Whitelist Check",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 Detected?": {
+        "main": [
+          [
+            {
+              "node": "🗄️ Save Alert",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📤 Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Save Alert": {
+        "main": [
+          [
+            {
+              "node": "GeoIP Lookup",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Count 1h": {
+        "main": [
+          [
+            {
+              "node": "AI Threat Analysis",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 Repeat ≥5?": {
+        "main": [
+          [
+            {
+              "node": "🚫 Block IP",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🗄️ Update Alert",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🚫 Block IP": {
+        "main": [
+          [
+            {
+              "node": "Severity Escalation",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Update Alert": {
+        "main": [
+          [
+            {
+              "node": "🔔 Notify Telegram",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔔 Notify Telegram": {
+        "main": [
+          [
+            {
+              "node": "Secondary Notify",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📝 Log Workflow": {
+        "main": [
+          [
+            {
+              "node": "📤 Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Whitelist Check": {
+        "main": [
+          [
+            {
+              "node": "🔀 Detected?",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📝 Log Workflow",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "GeoIP Lookup": {
+        "main": [
+          [
+            {
+              "node": "IP Reputation",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "IP Reputation": {
+        "main": [
+          [
+            {
+              "node": "🗄️ Count 1h",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "AI Threat Analysis": {
+        "main": [
+          [
+            {
+              "node": "🔀 Repeat ≥5?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Severity Escalation": {
+        "main": [
+          [
+            {
+              "node": "🔔 Notify Telegram",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Secondary Notify": {
+        "main": [
+          [
+            {
+              "node": "Detailed Audit Log",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Detailed Audit Log": {
+        "main": [
+          [
+            {
+              "node": "📝 Log Workflow",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "active": true,
+    "id": "830a6825-594b-448a-bd8b-9781f5637ada"
+  },
+  {
+    "name": "🌾 Rice Disease Diagnosis",
+    "nodes": [
+      {
+        "parameters": {
+          "content": "## 📥 TIẾP NHẬN\nNhận báo cáo ảnh",
+          "height": 260,
+          "width": 260,
+          "color": 4
+        },
+        "id": "📌 Note 1",
+        "name": "📌 Note 1",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -460,
+          -120
+        ]
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "new-report",
+          "options": {}
+        },
+        "id": "w1",
+        "name": "📥 Webhook - New Report",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          -400,
+          0
+        ],
+        "webhookId": "new-report"
+      },
+      {
+        "parameters": {
+          "content": "## 🔍 XỬ LÝ\nTải ảnh + AI",
+          "height": 260,
+          "width": 260,
+          "color": 5
+        },
+        "id": "📌 Note 2",
+        "name": "📌 Note 2",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -180,
+          -120
+        ]
+      },
+      {
+        "parameters": {
+          "assignments": {
+            "assignments": [
+              {
+                "id": "a1",
+                "name": "report_id",
+                "value": "={{ $json.body.id }}",
+                "type": "number"
+              },
+              {
+                "id": "a2",
+                "name": "image_url",
+                "value": "={{ $json.body.image_url.startsWith('http') ? $json.body.image_url : 'http://localhost:5000' + $json.body.image_url }}",
+                "type": "string"
+              },
+              {
+                "id": "a3",
+                "name": "user_id",
+                "value": "={{ $json.body.user_id }}",
+                "type": "number"
+              }
+            ]
+          }
+        },
+        "id": "n2",
+        "name": "🔧 Normalize Data",
+        "type": "n8n-nodes-base.set",
+        "typeVersion": 3.4,
+        "position": [
+          -120,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "method": "GET",
+          "url": "={{ $json.image_url }}",
+          "options": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        },
+        "id": "n3",
+        "name": "⬇️ Download Image",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [
+          160,
+          0
+        ],
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const bd=$input.first().binary.data;const s=$('🔧 Normalize Data').first().json;let b64=bd.data;if(!b64||b64.length<100){const buf=await this.helpers.getBinaryDataBuffer(0,'data');b64=buf.toString('base64');}return [{json:{report_id:s.report_id,user_id:s.user_id,image_base64:b64,mime_type:bd.mimeType||'image/jpeg'}}];"
+        },
+        "id": "n4",
+        "name": "🧠 Encode Base64",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          420,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5001/api/analyze-rice",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ image_base64: $json.image_base64 }) }}"
+        },
+        "id": "n5",
+        "name": "🧠 AI Analyze",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [
+          680,
+          0
+        ],
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const inp=$input.first().json;const s=$('🧠 Encode Base64').first().json;return [{json:{report_id:s.report_id,user_id:s.user_id,disease:inp.disease||'unknown',severity:inp.severity||'medium',confidence:inp.confidence||0.9}}];"
+        },
+        "id": "n6",
+        "name": "🧠 Parse AI",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          920,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "content": "## 📤 PHẢN HỒI\nLưu DB + cảnh báo",
+          "height": 260,
+          "width": 260,
+          "color": 6
+        },
+        "id": "📌 Note 3",
+        "name": "📌 Note 3",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          860,
+          -120
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "UPDATE reports SET ai_disease=$1, ai_severity=$2, status='reviewing' WHERE id=$3",
+          "options": {
+            "queryReplacement": "={{ [$('🧠 Parse AI').first().json.disease,$('🧠 Parse AI').first().json.severity,$('🧠 Parse AI').first().json.report_id] }}"
+          }
+        },
+        "id": "n7",
+        "name": "🗄️ Update Report",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2,
+        "position": [
+          1160,
+          -80
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT telegram_chat_id, full_name FROM users WHERE id=$1",
+          "options": {
+            "queryReplacement": "={{ [$('🧠 Parse AI').first().json.user_id] }}"
+          }
+        },
+        "id": "n8",
+        "name": "🗄️ Query Farmer",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2,
+        "position": [
+          1160,
+          80
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $('🧠 Parse AI').first().json.severity }}",
+                "rightValue": "high",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        },
+        "id": "n9",
+        "name": "🔀 Severity High?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1400,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "chatId": "7893336271",
+          "text": "=🌾 Báo cáo #{{ $('🧠 Parse AI').first().json.report_id }}\\nBệnh: {{ $('🧠 Parse AI').first().json.disease }}\\nMức độ: {{ $('🧠 Parse AI').first().json.severity }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
+        },
+        "id": "n10",
+        "name": "🔔 Notify Farmer",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1,
+        "position": [
+          1640,
+          -40
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5000/api/n8n/log",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ workflow_id:'rice-disease-diagnosis', status:'success', execution_count:1, message:'analyzed' }) }}"
+        },
+        "id": "n11",
+        "name": "📝 Log Workflow",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [
+          1880,
+          -40
+        ],
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ { ok:true, disease:$('🧠 Parse AI').first().json.disease } }}"
+        },
+        "id": "n12",
+        "name": "📤 Respond",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          2120,
+          -40
+        ]
+      },
+      {
+        "parameters": {
+          "chatId": "7893336271",
+          "text": "=❌ Lỗi Rice Diagnosis: {{ $json.message }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
+        },
+        "id": "n13",
+        "name": "❌ Error Handler",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1,
+        "position": [
+          920,
+          160
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-validate",
+        "name": "Validate Image",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          300,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nif(!item.image_url)throw new Error('Missing image_url');\nitem.validated=true;\nreturn [{json:item}];"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-dedupe",
+        "name": "Deduplicate Report",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          420,
+          200
+        ],
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT id FROM reports WHERE image_url=$1 LIMIT 1",
+          "options": {}
+        },
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-weather",
+        "name": "Weather Context",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          540,
+          200
+        ],
+        "parameters": {
+          "method": "GET",
+          "url": "http://localhost:5000/api/weather?field_id={{ $json.field_id }}",
+          "options": {}
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-treatment",
+        "name": "Treatment Plan",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          660,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nconst disease=item.ai_disease||'unknown';\nitem.treatment=disease==='leaf_blight'?'Phun Copper Oxychloride 0.3%':'Theo doi them';\nitem.prevention='Tang cuong thoat nuoc, bon phan can doi';\nreturn [{json:item}];"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-notify-farmer",
+        "name": "Notify Farmer TG",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1.2,
+        "position": [
+          780,
+          200
+        ],
+        "parameters": {
+          "chatId": "7893336271",
+          "text": "={{ 'Chan doan: '+$json.ai_disease+' - Muc do: '+$json.ai_severity+'\\nDieu tri: '+$json.treatment }}",
+          "additionalFields": {}
+        },
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-audit-rice",
+        "name": "Audit Rice Log",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          900,
+          200
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5000/api/n8n/log",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({source:'rice-disease-diagnosis',event_type:'diagnosis',severity:$json.ai_severity,ip_address:'system',message:$json.ai_disease,raw_data:$json}) }}",
+          "options": {}
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-retry",
+        "name": "Retry on Error",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          1020,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nitem.retry_count=(item.retry_count||0)+1;\nif(item.retry_count>3)throw new Error('Max retries exceeded');\nreturn [{json:item}];"
+        },
+        "continueOnFail": true
+      }
+    ],
+    "connections": {
+      "📥 Webhook - New Report": {
+        "main": [
+          [
+            {
+              "node": "🔧 Normalize Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔧 Normalize Data": {
+        "main": [
+          [
+            {
+              "node": "⬇️ Download Image",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "⬇️ Download Image": {
+        "main": [
+          [
+            {
+              "node": "🧠 Encode Base64",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🧠 Encode Base64": {
+        "main": [
+          [
+            {
+              "node": "🧠 AI Analyze",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🧠 AI Analyze": {
+        "main": [
+          [
+            {
+              "node": "🧠 Parse AI",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🧠 Parse AI": {
+        "main": [
+          [
+            {
+              "node": "Treatment Plan",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Update Report": {
+        "main": [
+          [
+            {
+              "node": "🗄️ Query Farmer",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Query Farmer": {
+        "main": [
+          [
+            {
+              "node": "Notify Farmer TG",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 Severity High?": {
+        "main": [
+          [
+            {
+              "node": "🔔 Notify Farmer",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "📝 Log Workflow",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔔 Notify Farmer": {
+        "main": [
+          [
+            {
+              "node": "📝 Log Workflow",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📝 Log Workflow": {
+        "main": [
+          [
+            {
+              "node": "📤 Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Validate Image": {
+        "main": [
+          [
+            {
+              "node": "Deduplicate Report",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Deduplicate Report": {
+        "main": [
+          [
+            {
+              "node": "Weather Context",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Weather Context": {
+        "main": [
+          [
+            {
+              "node": "🧠 Parse AI",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Treatment Plan": {
+        "main": [
+          [
+            {
+              "node": "🗄️ Update Report",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Notify Farmer TG": {
+        "main": [
+          [
+            {
+              "node": "Audit Rice Log",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Audit Rice Log": {
+        "main": [
+          [
+            {
+              "node": "🔀 Severity High?",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "Retry on Error",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Retry on Error": {
+        "main": [
+          [
+            {
+              "node": "📤 Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "active": true,
+    "id": "e5ccd565-4e63-490c-9f2c-67aa63985d2d"
+  },
+  {
+    "name": "🛰️ Sentinel-2 Sync",
+    "nodes": [
+      {
+        "parameters": {
+          "content": "## 📥 TIẾP NHẬN\nSchedule đồng bộ",
+          "height": 260,
+          "width": 260,
+          "color": 4
+        },
+        "id": "📌 Note 1",
+        "name": "📌 Note 1",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -460,
+          -120
+        ]
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "hour",
+                "hourInterval": 2
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "w1",
+        "name": "⏰ Cron - 2AM",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [
+          -400,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "content": "## 🔍 XỬ LÝ\nGEE + AI",
+          "height": 260,
+          "width": 260,
+          "color": 5
+        },
+        "id": "📌 Note 2",
+        "name": "📌 Note 2",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -180,
+          -120
+        ]
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5001/api/analyze-sentinel",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ lat: ($json.body && $json.body.lat) || 16.0, lng: ($json.body && $json.body.lng) || 108.0, ndvi: ($json.body && $json.body.ndvi) || 0.42, ndre: ($json.body && $json.body.ndre) || 0.31, field_id: ($json.body && $json.body.field_id) || 1, zoom: ($json.body && $json.body.zoom) || 16, field_name: ($json.body && $json.body.field_name) || 'Vùng canh tác' }) }}"
+        },
+        "id": "n2",
+        "name": "🌐 Call GEE/AI",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [
+          -120,
+          0
+        ],
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "jsCode": "const d=$input.first().json;const ndvi=Number(d.ndvi||0);const ndre=Number(d.ndre||0);if(ndvi<0||ndvi>1) throw new Error('NDVI invalid');let fieldId=1;try{const wh=$('📥 Webhook - Satellite Analyze').first().json;fieldId=Number(wh.body?.field_id||1);}catch(e){}return [{json:{ndvi,ndre,field_id:fieldId,status:d.status||'unknown',disease:d.disease||'none',confidence:d.confidence||0.9,created_at:new Date().toISOString()}}];"
+        },
+        "id": "n3",
+        "name": "🧠 Validate Data",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          160,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const d=$input.first().json;return [{json:{...d, feature_window:'24h'}}];"
+        },
+        "id": "n4",
+        "name": "🧠 Parse Result",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          420,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "content": "## 📤 PHẢN HỒI\nLưu DB + cảnh báo",
+          "height": 260,
+          "width": 260,
+          "color": 6
+        },
+        "id": "📌 Note 3",
+        "name": "📌 Note 3",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          360,
+          -120
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO features (field_id,window_start,window_end,ndvi_avg,ndre_avg,created_at) VALUES ($3,NOW()-INTERVAL '1 day',NOW(),$1,$2,NOW()) RETURNING id;",
+          "options": {
+            "queryReplacement": "={{ [$('🧠 Parse Result').first().json.ndvi,$('🧠 Parse Result').first().json.ndre,$('🧠 Parse Result').first().json.field_id] }}"
+          }
+        },
+        "id": "n5",
+        "name": "🗄️ Save Feature",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2,
+        "position": [
+          680,
+          -80
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO model_predictions (feature_id,model_name,prediction,confidence) VALUES ($1,'sentinel-rf',$2,$3) RETURNING id;",
+          "options": {
+            "queryReplacement": "={{ [$('🗄️ Save Feature').first().json.id,$('🧠 Parse Result').first().json.disease,$('🧠 Parse Result').first().json.confidence] }}"
+          }
+        },
+        "id": "n6",
+        "name": "🗄️ Save Prediction",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2,
+        "position": [
+          920,
+          -80
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "UPDATE fields SET status=$1, updated_at=NOW() WHERE id=$2",
+          "options": {
+            "queryReplacement": "={{ [$('🧠 Parse Result').first().json.status,$('🧠 Parse Result').first().json.field_id] }}"
+          }
+        },
+        "id": "n7",
+        "name": "🗄️ Update Field",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2,
+        "position": [
+          1160,
+          -80
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "conditions": {
+            "conditions": [
+              {
+                "id": "c1",
+                "leftValue": "={{ $('🧠 Parse Result').first().json.ndvi }}",
+                "rightValue": 0.3,
+                "operator": {
+                  "type": "number",
+                  "operation": "lt"
+                }
+              }
+            ],
+            "combinator": "and"
+          }
+        },
+        "id": "n8",
+        "name": "🔀 NDVI Low?",
+        "type": "n8n-nodes-base.if",
+        "typeVersion": 2,
+        "position": [
+          1400,
+          -80
+        ]
+      },
+      {
+        "parameters": {
+          "chatId": "7893336271",
+          "text": "=⚠️ NDVI thấp: {{ $('🧠 Parse Result').first().json.ndvi }} - {{ $('🧠 Parse Result').first().json.disease }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
+        },
+        "id": "n9",
+        "name": "🔔 Notify Alert",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1,
+        "position": [
+          1640,
+          -120
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "chatId": "7893336271",
+          "text": "=✅ Sentinel-2 sync OK: NDVI={{ $('🧠 Parse Result').first().json.ndvi }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
+        },
+        "id": "n10",
+        "name": "🔔 Notify OK",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1,
+        "position": [
+          1640,
+          40
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5000/api/n8n/log",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ workflow_id:'sentinel-2-sync', status:'success', execution_count:1, message:'synced' }) }}"
+        },
+        "id": "n11",
+        "name": "📝 Log Workflow",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [
+          1880,
+          -40
+        ],
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ { ok:true } }}"
+        },
+        "id": "n12",
+        "name": "📤 Respond",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          2120,
+          -40
+        ]
+      },
+      {
+        "parameters": {
+          "chatId": "7893336271",
+          "text": "=❌ Lỗi Sentinel Sync: {{ $json.message }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
+        },
+        "id": "n13",
+        "name": "❌ Error Handler",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1,
+        "position": [
+          920,
+          160
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "sentinel-analyze",
+          "options": {}
+        },
+        "id": "wh-sentinel",
+        "name": "📥 Webhook - Satellite Analyze",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          -400,
+          -180
+        ]
+      },
+      {
+        "id": "n-validate-s",
+        "name": "Validate Data",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          300,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const items=$input.all();\nfor(const i of items){if(!i.json.field_id)throw new Error('Missing field_id');}\nreturn items;"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-anomaly",
+        "name": "Anomaly Detection",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          420,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nconst ndvi=item.ndvi_avg||0;\nitem.anomaly=ndvi<0.3?'low_ndvi':ndvi>0.9?'high_ndvi':'normal';\nitem.risk_score=ndvi<0.3?0.8:0.2;\nreturn [{json:item}];"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-multi-field",
+        "name": "Multi-Field Process",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          540,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const items=$input.all();\nreturn items.map(i=>({json:{...i.json,processed:true,processed_at:new Date().toISOString()}}));"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-alert-gen",
+        "name": "Generate Alert",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2.4,
+        "position": [
+          660,
+          200
+        ],
+        "parameters": {
+          "operation": "insert",
+          "schema": "public",
+          "table": "alerts",
+          "columns": "alert_type,severity,title,description,ip_address,status",
+          "additionalFields": {}
+        },
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-retry-s",
+        "name": "Retry Sync",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          780,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nitem.retry_count=(item.retry_count||0)+1;\nif(item.retry_count>3)throw new Error('Max retries');\nreturn [{json:item}];"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-audit-s",
+        "name": "Audit Sentinel Log",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          900,
+          200
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5000/api/n8n/log",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({source:'sentinel-2-sync',event_type:'satellite_sync',severity:'info',ip_address:'system',message:'Synced',raw_data:$json}) }}",
+          "options": {}
+        },
+        "continueOnFail": true
+      }
+    ],
+    "connections": {
+      "⏰ Cron - 2AM": {
+        "main": [
+          [
+            {
+              "node": "🌐 Call GEE/AI",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🌐 Call GEE/AI": {
+        "main": [
+          [
+            {
+              "node": "🧠 Validate Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🧠 Validate Data": {
+        "main": [
+          [
+            {
+              "node": "Validate Data",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🧠 Parse Result": {
+        "main": [
+          [
+            {
+              "node": "🗄️ Save Feature",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Save Feature": {
+        "main": [
+          [
+            {
+              "node": "🗄️ Save Prediction",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Save Prediction": {
+        "main": [
+          [
+            {
+              "node": "🗄️ Update Field",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Update Field": {
+        "main": [
+          [
+            {
+              "node": "🔀 NDVI Low?",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔀 NDVI Low?": {
+        "main": [
+          [
+            {
+              "node": "🔔 Notify Alert",
+              "type": "main",
+              "index": 0
+            }
+          ],
+          [
+            {
+              "node": "🔔 Notify OK",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔔 Notify Alert": {
+        "main": [
+          [
+            {
+              "node": "📝 Log Workflow",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔔 Notify OK": {
+        "main": [
+          [
+            {
+              "node": "📝 Log Workflow",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📝 Log Workflow": {
+        "main": [
+          [
+            {
+              "node": "📤 Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📥 Webhook - Satellite Analyze": {
+        "main": [
+          [
+            {
+              "node": "🌐 Call GEE/AI",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Validate Data": {
+        "main": [
+          [
+            {
+              "node": "Anomaly Detection",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Anomaly Detection": {
+        "main": [
+          [
+            {
+              "node": "Multi-Field Process",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Multi-Field Process": {
+        "main": [
+          [
+            {
+              "node": "Generate Alert",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Generate Alert": {
+        "main": [
+          [
+            {
+              "node": "Retry Sync",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Retry Sync": {
+        "main": [
+          [
+            {
+              "node": "Audit Sentinel Log",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Audit Sentinel Log": {
+        "main": [
+          [
+            {
+              "node": "🧠 Parse Result",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "active": true,
+    "id": "fa637cec-04ed-4d43-bcb5-db173382b55d"
+  },
+  {
+    "name": "📊 Daily Security Report",
+    "nodes": [
+      {
+        "parameters": {
+          "content": "## 📥 TIẾP NHẬN\nSchedule báo cáo",
+          "height": 260,
+          "width": 260,
+          "color": 4
+        },
+        "id": "📌 Note 1",
+        "name": "📌 Note 1",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -460,
+          -120
+        ]
+      },
+      {
+        "parameters": {
+          "rule": {
+            "interval": [
+              {
+                "field": "hour",
+                "hourInterval": 8
+              }
+            ]
+          },
+          "options": {}
+        },
+        "id": "w1",
+        "name": "⏰ Cron - 8AM",
+        "type": "n8n-nodes-base.scheduleTrigger",
+        "typeVersion": 1,
+        "position": [
+          -400,
+          0
+        ]
+      },
+      {
+        "parameters": {
+          "content": "## 🔍 XỬ LÝ\nTổng hợp dữ liệu",
+          "height": 260,
+          "width": 260,
+          "color": 5
+        },
+        "id": "📌 Note 2",
+        "name": "📌 Note 2",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          -180,
+          -120
+        ]
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE severity='critical')::int AS critical, COUNT(*) FILTER (WHERE severity='high')::int AS high, COUNT(DISTINCT ip_address)::int AS unique_ips FROM alerts WHERE created_at > NOW() - INTERVAL '24 hours'"
+        },
+        "id": "n2",
+        "name": "🗄️ Stats 24h",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2,
+        "position": [
+          -120,
+          0
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "SELECT ip_address, COUNT(*)::int AS hits FROM alerts WHERE created_at > NOW() - INTERVAL '24 hours' GROUP BY ip_address ORDER BY hits DESC LIMIT 5"
+        },
+        "id": "n3",
+        "name": "🗄️ Top 5 IP",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2,
+        "position": [
+          -120,
+          160
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "mode": "append"
+        },
+        "id": "n4",
+        "name": "🔀 Merge",
+        "type": "n8n-nodes-base.merge",
+        "typeVersion": 2,
+        "position": [
+          160,
+          80
+        ]
+      },
+      {
+        "parameters": {
+          "jsCode": "const s=$('🗄️ Stats 24h').first().json;const top=$('🗄️ Top 5 IP').all().map(x=>x.json.ip_address+':'+x.json.hits).join(', ');return [{json:{msg:`📊 Báo cáo 24h\\nTổng: ${s.total}\\nCritical: ${s.critical}\\nHigh: ${s.high}\\nUnique IP: ${s.unique_ips}\\nTop IP: ${top}`}}];"
+        },
+        "id": "n5",
+        "name": "🧠 Format Report",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          420,
+          80
+        ]
+      },
+      {
+        "parameters": {
+          "content": "## 📤 PHẢN HỒI\nGửi Telegram/Gmail",
+          "height": 260,
+          "width": 260,
+          "color": 6
+        },
+        "id": "📌 Note 3",
+        "name": "📌 Note 3",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          360,
+          -120
+        ]
+      },
+      {
+        "parameters": {
+          "chatId": "7893336271",
+          "text": "={{ $json.msg }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
+        },
+        "id": "n6",
+        "name": "🔔 Notify Telegram",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1,
+        "position": [
+          680,
+          40
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "operation": "executeQuery",
+          "query": "INSERT INTO alerts_summary (time_window,summary,alert_count,created_at) VALUES ('24h',$1,$2,NOW())",
+          "options": {
+            "queryReplacement": "={{ [$('🧠 Format Report').first().json.msg,$('🗄️ Stats 24h').first().json.total] }}"
+          }
+        },
+        "id": "n8",
+        "name": "🗄️ Save Summary",
+        "type": "n8n-nodes-base.postgres",
+        "typeVersion": 2,
+        "position": [
+          920,
+          40
+        ],
+        "credentials": {
+          "postgres": {
+            "id": "PRHgakBkMKU8w08k",
+            "name": "Postgres account"
+          }
+        }
+      },
+      {
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5000/api/n8n/log",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ workflow_id:'daily-security-report', status:'success', execution_count:1, message:'reported' }) }}"
+        },
+        "id": "n9",
+        "name": "📝 Log Workflow",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4,
+        "position": [
+          1160,
+          40
+        ],
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "respondWith": "json",
+          "responseBody": "={{ { ok:true } }}"
+        },
+        "id": "n10",
+        "name": "📤 Respond",
+        "type": "n8n-nodes-base.respondToWebhook",
+        "typeVersion": 1,
+        "position": [
+          1400,
+          40
+        ]
+      },
+      {
+        "parameters": {
+          "content": "## ❌ BẮT LỖI\nCảnh báo lỗi",
+          "height": 260,
+          "width": 260,
+          "color": 3
+        },
+        "id": "📌 Note 4",
+        "name": "📌 Note 4",
+        "type": "n8n-nodes-base.stickyNote",
+        "typeVersion": 1,
+        "position": [
+          680,
+          -260
+        ]
+      },
+      {
+        "parameters": {
+          "chatId": "7893336271",
+          "text": "=❌ Lỗi Daily Report: {{ $json.message }}",
+          "additionalFields": {
+            "parse_mode": "HTML"
+          }
+        },
+        "id": "n11",
+        "name": "❌ Error Handler",
+        "type": "n8n-nodes-base.telegram",
+        "typeVersion": 1,
+        "position": [
+          920,
+          -200
+        ],
+        "credentials": {
+          "telegramApi": {
+            "id": "DKM7gaGpGoRtcdzq",
+            "name": "Telegram account"
+          }
+        },
+        "continueOnFail": true
+      },
+      {
+        "parameters": {
+          "jsCode": "return [{json:{checked:true,ts:new Date().toISOString()}}];"
+        },
+        "id": "n12",
+        "name": "🧠 Health Check",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          -120,
+          -120
+        ]
+      },
+      {
+        "parameters": {
+          "httpMethod": "POST",
+          "path": "daily-report",
+          "options": {}
+        },
+        "id": "wh-daily",
+        "name": "📥 Webhook - Daily Report",
+        "type": "n8n-nodes-base.webhook",
+        "typeVersion": 1,
+        "position": [
+          -400,
+          -180
+        ]
+      },
+      {
+        "id": "n-aggregate",
+        "name": "Aggregate Stats",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          300,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const items=$input.all();\nconst total=items.reduce((s,i)=>s+(i.json.count||0),0);\nreturn [{json:{total,items:items.map(i=>i.json),generated_at:new Date().toISOString()}}];"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-trend",
+        "name": "Trend Analysis",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          420,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nitem.trend=item.total>10?'increasing':item.total>5?'stable':'decreasing';\nitem.risk_level=item.total>20?'critical':item.total>10?'high':'medium';\nreturn [{json:item}];"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-format",
+        "name": "Format Report",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          540,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nitem.report_text='Daily Report\\nTotal: '+item.total+'\\nTrend: '+item.trend+'\\nRisk: '+item.risk_level+'\\nGenerated: '+item.generated_at;\nreturn [{json:item}];"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-email",
+        "name": "Email Report",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          660,
+          200
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5000/api/n8n/log",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({source:'daily-security-report',event_type:'daily_report',severity:'info',ip_address:'system',message:$json.report_text,raw_data:$json}) }}",
+          "options": {}
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-retry-d",
+        "name": "Retry Report",
+        "type": "n8n-nodes-base.code",
+        "typeVersion": 2,
+        "position": [
+          780,
+          200
+        ],
+        "parameters": {
+          "jsCode": "const item=$input.first().json;\nitem.retry_count=(item.retry_count||0)+1;\nif(item.retry_count>3)throw new Error('Max retries');\nreturn [{json:item}];"
+        },
+        "continueOnFail": true
+      },
+      {
+        "id": "n-audit-d",
+        "name": "Audit Daily Log",
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
+        "position": [
+          900,
+          200
+        ],
+        "parameters": {
+          "method": "POST",
+          "url": "http://localhost:5000/api/n8n/log",
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({source:'daily-security-report',event_type:'audit',severity:'info',ip_address:'system',message:'Report generated',raw_data:$json}) }}",
+          "options": {}
+        },
+        "continueOnFail": true
+      }
+    ],
+    "connections": {
+      "⏰ Cron - 8AM": {
+        "main": [
+          [
+            {
+              "node": "🗄️ Stats 24h",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "🗄️ Top 5 IP",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "🧠 Health Check",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Stats 24h": {
+        "main": [
+          [
+            {
+              "node": "🔀 Merge",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Top 5 IP": {
+        "main": [
+          [
+            {
+              "node": "🔀 Merge",
+              "type": "main",
+              "index": 1
+            }
+          ]
+        ]
+      },
+      "🔀 Merge": {
+        "main": [
+          [
+            {
+              "node": "Aggregate Stats",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🧠 Format Report": {
+        "main": [
+          [
+            {
+              "node": "🔔 Notify Telegram",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🔔 Notify Telegram": {
+        "main": [
+          [
+            {
+              "node": "Email Report",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "🗄️ Save Summary": {
+        "main": [
+          [
+            {
+              "node": "📝 Log Workflow",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📝 Log Workflow": {
+        "main": [
+          [
+            {
+              "node": "📤 Respond",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "📥 Webhook - Daily Report": {
+        "main": [
+          [
+            {
+              "node": "🗄️ Stats 24h",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "🗄️ Top 5 IP",
+              "type": "main",
+              "index": 0
+            },
+            {
+              "node": "🧠 Health Check",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Aggregate Stats": {
+        "main": [
+          [
+            {
+              "node": "Trend Analysis",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Trend Analysis": {
+        "main": [
+          [
+            {
+              "node": "Format Report",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Email Report": {
+        "main": [
+          [
+            {
+              "node": "Retry Report",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Retry Report": {
+        "main": [
+          [
+            {
+              "node": "Audit Daily Log",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      },
+      "Audit Daily Log": {
+        "main": [
+          [
+            {
+              "node": "🗄️ Save Summary",
+              "type": "main",
+              "index": 0
+            }
+          ]
+        ]
+      }
+    },
+    "active": true,
+    "id": "36e021f2-3cfc-48fa-9e63-ee909498d4eb"
+  }
+]

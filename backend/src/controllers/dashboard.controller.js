@@ -8,6 +8,17 @@ exports.getStats = async (req, res) => {
     const resolvedAlerts = await pool.query("SELECT COUNT(*) FROM alerts WHERE status = 'resolved'");
     const totalLogs = await pool.query('SELECT COUNT(*) FROM logs');
     const totalFields = await pool.query('SELECT COUNT(*) FROM fields');
+    const blockedIPs = await pool.query('SELECT COUNT(*)::int AS count FROM blocked_ips');
+    const risk = await pool.query(`
+      SELECT LEAST(100, ROUND(
+        COUNT(*) FILTER (WHERE LOWER(severity) = 'critical' AND status <> 'resolved') * 0.5
+        + COUNT(*) FILTER (
+            WHERE created_at >= NOW() - INTERVAL '24 hours'
+              AND LOWER(severity) IN ('critical', 'high')
+          ) * 10
+      ))::int AS score
+      FROM alerts
+    `);
 
     res.json({
       success: true,
@@ -18,6 +29,8 @@ exports.getStats = async (req, res) => {
         resolvedAlerts: parseInt(resolvedAlerts.rows[0].count),
         totalLogs: parseInt(totalLogs.rows[0].count),
         totalFields: parseInt(totalFields.rows[0].count),
+        blockedIPs: blockedIPs.rows[0].count,
+        riskScore: risk.rows[0].score,
       },
     });
   } catch (err) {
@@ -73,12 +86,12 @@ exports.getAlertsTimeline = async (req, res) => {
 exports.getRecentAlerts = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT a.id, a.title, a.severity, a.status, a.category, a.created_at,
-             f.name AS field_name
+      SELECT a.id, a.title, a.severity, a.status, a.category, a.alert_type,
+             a.ip_address, a.created_at, f.name AS field_name
       FROM alerts a
       LEFT JOIN fields f ON a.field_id = f.id
       ORDER BY a.created_at DESC
-      LIMIT 10
+      LIMIT 20
     `);
     res.json({ success: true, data: result.rows });
   } catch (err) {

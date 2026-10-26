@@ -6,7 +6,7 @@ import {
   Shield, ShieldAlert, Activity, Lock, Zap, Eye, ArrowRight, CheckCircle,
   Satellite, Brain, Bell, BarChart3, Globe, Radar, Fingerprint, Server,
   TrendingUp, Users, Clock, ChevronRight, Database, Cloud,
-  MessageCircle, X, Send as SendIcon, Bot
+  MessageCircle, X, Send as SendIcon, Bot, Loader2
 } from "lucide-react";
 
 const features = [
@@ -378,22 +378,28 @@ function AIChatWidget() {
   ]);
   const [input, setInput] = useState("");
 
-  const handleSend = () => {
-    if (!input.trim()) return;
+  const [loading, setLoading] = useState(false);
+
+  const handleSend = async () => {
+    if (!input.trim() || loading) return;
     const userMsg = input;
     setMessages((m) => [...m, { role: "user", text: userMsg }]);
     setInput("");
-
-    setTimeout(() => {
-      let reply = "Cảm ơn bạn đã hỏi! Đây là hệ thống giám sát an ninh mạng cho nông nghiệp.";
-      const q = userMsg.toLowerCase();
-      if (q.includes("tính năng") || q.includes("feature")) reply = "RiceGuard có 9 tính năng chính: phát hiện xâm nhập, viễn thám Sentinel-2, học máy, cảnh báo đa kênh, dashboard, bảo mật, giám sát 24/7, điều tra sự cố, hạ tầng mạnh mẽ.";
-      else if (q.includes("đăng nhập") || q.includes("login")) reply = "Đăng nhập bằng admin/admin123. Nhấn nút 'Đăng nhập' ở góc phải trên màn hình.";
-      else if (q.includes("lúa") || q.includes("vàng lá")) reply = "Hệ thống phân tích chỉ số NDVI/NDRE từ ảnh vệ tinh Sentinel-2 để phát hiện sớm vàng lá lúa.";
-      else if (q.includes("giá") || q.includes("phí")) reply = "RiceGuard là nền tảng mã nguồn mở, hoàn toàn miễn phí.";
-      else if (q.includes("liên hệ")) reply = "Vui lòng liên hệ qua email support@riceguard.vn.";
+    setLoading(true);
+    try {
+      const res = await fetch("http://localhost:5000/api/ai/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: userMsg }),
+      });
+      const json = await res.json();
+      const reply = json?.data?.reply || "Xin lỗi, tôi chưa hiểu câu hỏi.";
       setMessages((m) => [...m, { role: "bot", text: reply }]);
-    }, 800);
+    } catch {
+      setMessages((m) => [...m, { role: "bot", text: "Lỗi kết nối. Vui lòng thử lại." }]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -442,8 +448,8 @@ function AIChatWidget() {
               placeholder="Hỏi gì đó..."
               className="flex-1 h-10 rounded-xl border border-border bg-input px-3 text-sm outline-none focus:border-primary/50"
             />
-            <button onClick={handleSend} className="flex h-10 w-10 items-center justify-center rounded-xl gradient-primary text-white">
-              <SendIcon className="h-4 w-4" />
+            <button onClick={handleSend} disabled={loading} className="flex h-10 w-10 items-center justify-center rounded-xl gradient-primary text-white disabled:opacity-50">
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendIcon className="h-4 w-4" />}
             </button>
           </div>
         </motion.div>

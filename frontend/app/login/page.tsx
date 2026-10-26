@@ -1,13 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import api from "@/lib/api";
-import {
-  Shield, Lock, User as UserIcon, Loader2, ArrowRight, ArrowLeft,
-  Eye, EyeOff, CheckCircle, Sparkles, Mail, Smartphone
-} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import api, { getApiErrorMessage } from "@/lib/api";
+import { Shield, Lock, Loader2, ArrowLeft, Eye, EyeOff, Activity, Globe, Server, Radar, Terminal, ChevronRight } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -16,7 +13,14 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [remember, setRemember] = useState(false);
+  const [time, setTime] = useState("");
+
+  useEffect(() => {
+    const update = () => setTime(new Date().toLocaleTimeString("vi-VN"));
+    update();
+    const t = setInterval(update, 1000);
+    return () => clearInterval(t);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,218 +33,236 @@ export default function LoginPage() {
         localStorage.setItem("user", JSON.stringify(res.data.user));
         router.push("/dashboard");
       }
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Đăng nhập thất bại");
+    } catch (err) {
+      setError(getApiErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="relative min-h-screen flex overflow-hidden bg-background">
-      {/* Background */}
-      <div className="absolute inset-0 bg-grid opacity-50" />
-      <div className="absolute top-0 left-1/4 h-[600px] w-[600px] rounded-full bg-primary/20 blur-3xl animate-blob" />
-      <div className="absolute bottom-0 right-1/4 h-[600px] w-[600px] rounded-full bg-cyber/20 blur-3xl animate-blob" style={{ animationDelay: "3s" }} />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[800px] w-[800px] rounded-full bg-cyan-500/5 blur-3xl" />
+    <div className="relative flex min-h-screen overflow-hidden bg-[#050a0e]">
+      {/* Animated grid background */}
+      <div className="absolute inset-0 opacity-30"
+        style={{
+          backgroundImage: "linear-gradient(rgba(16,185,129,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.08) 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
+          animation: "gridMove 20s linear infinite",
+        }}
+      />
+      <style>{`
+        @keyframes gridMove { 0% { transform: translateY(0); } 100% { transform: translateY(40px); } }
+        @keyframes scanLine { 0% { top: -2px; } 100% { top: 100%; } }
+        @keyframes pulseRing { 0% { transform: scale(0.8); opacity: 0.8; } 100% { transform: scale(2.2); opacity: 0; } }
+        @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+      `}</style>
 
-      {/* Back button - hiển thị cả desktop */}
-      <Link
-        href="/"
-        className="absolute top-6 left-6 z-30 flex items-center gap-2 rounded-xl glass px-4 py-2.5 text-sm font-medium hover:bg-accent/50 hover:border-primary/30 transition group"
-      >
-        <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition" />
-        Trang chủ
-      </Link>
+      {/* Scan line */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-primary/60 to-transparent" style={{ animation: "scanLine 4s linear infinite" }} />
+      </div>
 
-      {/* Left - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 relative z-10 flex-col justify-between p-12">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-primary glow">
-            <Shield className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold tracking-tight">RiceGuard</h1>
-            <p className="text-[10px] text-muted-foreground -mt-0.5">Security Platform</p>
+      {/* Glowing orbs */}
+      <div className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-primary/10 blur-[120px]" />
+      <div className="absolute -bottom-40 -right-40 h-[600px] w-[600px] rounded-full bg-cyber/10 blur-[120px]" />
+
+      {/* Left panel */}
+      <div className="relative hidden w-[55%] flex-col justify-between overflow-hidden border-r border-primary/10 p-12 lg:flex">
+        {/* Radar */}
+        <div className="absolute right-[-100px] top-1/2 -translate-y-1/2 opacity-20">
+          <div className="relative h-[400px] w-[400px]">
+            <div className="absolute inset-0 rounded-full border border-primary/30" />
+            <div className="absolute inset-[40px] rounded-full border border-primary/20" />
+            <div className="absolute inset-[80px] rounded-full border border-primary/15" />
+            <div className="absolute inset-[120px] rounded-full border border-primary/10" />
+            <div className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary" />
+            <div className="absolute left-1/2 top-1/2 h-[200px] w-[1px] origin-bottom bg-gradient-to-t from-primary/60 to-transparent" style={{ animation: "spin 4s linear infinite", transformOrigin: "50% 100%" }} />
           </div>
         </div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary mb-6">
-            <Sparkles className="h-3.5 w-3.5" />
-            Bảo vệ hệ thống nông nghiệp thông minh
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="relative flex h-11 w-11 items-center justify-center rounded-lg border border-primary/40 bg-primary/10">
+            <Shield className="h-6 w-6 text-primary" />
+            <div className="absolute inset-0 rounded-lg" style={{ animation: "pulseRing 2s ease-out infinite" }} />
           </div>
-          <h2 className="text-4xl lg:text-5xl font-bold tracking-tight leading-[1.1] mb-4">
-            Bảo vệ <span className="text-gradient">nông nghiệp</span>
-            <br />
-            bằng <span className="text-gradient">an ninh mạng</span>
-          </h2>
-          <p className="text-muted-foreground mb-8 max-w-md leading-relaxed">
-            Nền tảng giám sát, phát hiện và tự động ứng phó sự cố an ninh mạng cho hệ thống cảnh báo sớm dịch bệnh cây lúa.
-          </p>
+          <div>
+            <p className="text-[16px] font-bold tracking-tight">RiceGuard</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-primary/70">Security Operations Center</p>
+          </div>
+        </div>
 
-          <div className="space-y-3">
+        <div className="relative z-10 max-w-lg space-y-8">
+          <div>
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-primary">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+              System Online
+            </div>
+            <h1 className="text-4xl font-bold tracking-tight leading-[1.1]">
+              Điều hành an ninh mạng
+              <br />
+              <span className="text-primary">cho nông nghiệp thông minh</span>
+            </h1>
+            <p className="mt-4 text-[13px] leading-relaxed text-muted-foreground">
+              Nền tảng SOC chuyên dụng: phát hiện xâm nhập thời gian thực, giám sát viễn thám Sentinel-2,
+              cảnh báo tự động đa kênh và ứng phó sự cố tức thời.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             {[
-              "Phát hiện xâm nhập bằng AI",
-              "Giám sát viễn thám Sentinel-2",
-              "Cảnh báo tự động qua Telegram",
-              "Bảo mật đa lớp với JWT",
-            ].map((item, i) => (
-              <motion.div
-                key={item}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 + i * 0.1 }}
-                className="flex items-center gap-3"
-              >
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 border border-primary/30">
-                  <CheckCircle className="h-3.5 w-3.5 text-primary" />
+              { icon: Activity, label: "Giám sát 24/7", value: "Real-time", color: "text-primary" },
+              { icon: Globe, label: "GeoIP Tracking", value: "Global", color: "text-cyber" },
+              { icon: Radar, label: "Phát hiện AI", value: "15 models", color: "text-warning" },
+              { icon: Server, label: "Hạ tầng", value: "99.9% uptime", color: "text-success" },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <div key={item.label} className="group rounded-lg border border-border/60 bg-card/40 p-3 backdrop-blur transition hover:border-primary/40">
+                  <Icon className={`h-4 w-4 ${item.color}`} />
+                  <p className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground">{item.label}</p>
+                  <p className="text-[13px] font-semibold">{item.value}</p>
                 </div>
-                <span className="text-sm text-muted-foreground">{item}</span>
-              </motion.div>
-            ))}
+              );
+            })}
           </div>
-        </motion.div>
 
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
-          Hệ thống đang hoạt động • Phiên bản 2.0
+          <div className="flex items-center gap-6 text-[10px] font-mono text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <Terminal className="h-3 w-3" />
+              n8n: 5 workflows active
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Server className="h-3 w-3" />
+              BE: online
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Globe className="h-3 w-3" />
+              DB: connected
+            </span>
+          </div>
+        </div>
+
+        <div className="relative z-10 flex items-center justify-between text-[10px] text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+            {time}
+          </span>
+          <span>v2.0.0 • RiceGuard SOC</span>
         </div>
       </div>
 
-      {/* Right - Form */}
-      <div className="w-full lg:w-1/2 relative z-10 flex items-center justify-center p-6">
+      {/* Right panel - form */}
+      <div className="relative flex flex-1 items-center justify-center p-6">
+        {/* Corner decorations */}
+        <div className="pointer-events-none absolute left-6 top-6 h-8 w-8 border-l-2 border-t-2 border-primary/30" />
+        <div className="pointer-events-none absolute right-6 top-6 h-8 w-8 border-r-2 border-t-2 border-primary/30" />
+        <div className="pointer-events-none absolute bottom-6 left-6 h-8 w-8 border-b-2 border-l-2 border-primary/30" />
+        <div className="pointer-events-none absolute bottom-6 right-6 h-8 w-8 border-b-2 border-r-2 border-primary/30" />
+
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="w-full max-w-md"
+          transition={{ duration: 0.4 }}
+          className="w-full max-w-[360px]"
         >
-          {/* Mobile logo */}
-          <div className="lg:hidden mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl gradient-primary shadow-2xl glow">
-              <Shield className="h-8 w-8 text-white" />
+          <div className="mb-8 text-center">
+            <div className="relative mx-auto mb-4 flex h-14 w-14 items-center justify-center">
+              <div className="absolute inset-0 rounded-xl border border-primary/40 bg-primary/5" />
+              <div className="absolute inset-0 rounded-xl" style={{ animation: "pulseRing 2.5s ease-out infinite" }} />
+              <Shield className="relative h-7 w-7 text-primary" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">RiceGuard</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Nền tảng An ninh mạng Nông nghiệp</p>
+            <h2 className="text-lg font-bold tracking-tight">Xác thực truy cập</h2>
+            <p className="mt-1 text-[12px] text-muted-foreground">Nhập thông tin đăng nhập để vào hệ thống SOC</p>
           </div>
 
-          <div className="glass-strong rounded-3xl border border-border p-8 shadow-2xl">
-            <div className="mb-6">
-              <h2 className="text-2xl font-semibold">Đăng nhập</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                Nhập thông tin để truy cập hệ thống
-              </p>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="username" className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                <Terminal className="h-3 w-3" />
+                Username
+              </label>
+              <input
+                id="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="admin"
+                autoComplete="username"
+                className="mt-1.5 h-10 w-full rounded-md border border-border bg-input/80 px-3 text-sm outline-none placeholder:text-muted-foreground/40 transition focus:border-primary/60 focus:ring-2 focus:ring-primary/10"
+                required
+              />
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                  <UserIcon className="h-3 w-3" />
-                  Tên đăng nhập
-                </label>
-                <div className="relative group">
-                  <UserIcon className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition" />
-                  <input
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="admin"
-                    className="w-full h-12 rounded-xl border border-border bg-input pl-11 pr-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
-                    required
-                  />
-                </div>
+            <div>
+              <label htmlFor="password" className="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                <Lock className="h-3 w-3" />
+                Password
+              </label>
+              <div className="relative mt-1.5">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  className="h-10 w-full rounded-md border border-border bg-input/80 px-3 pr-10 text-sm outline-none placeholder:text-muted-foreground/40 transition focus:border-primary/60 focus:ring-2 focus:ring-primary/10"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground transition hover:text-foreground"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                    <Lock className="h-3 w-3" />
-                    Mật khẩu
-                  </label>
-                  <a href="#" className="text-xs text-primary hover:underline">Quên mật khẩu?</a>
-                </div>
-                <div className="relative group">
-                  <Lock className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full h-12 rounded-xl border border-border bg-input pl-11 pr-11 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition"
-                    tabIndex={-1}
-                    title={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="remember"
-                    checked={remember}
-                    onChange={(e) => setRemember(e.target.checked)}
-                    className="h-4 w-4 rounded border-border accent-primary cursor-pointer"
-                  />
-                  <label htmlFor="remember" className="text-xs text-muted-foreground cursor-pointer select-none">
-                    Ghi nhớ đăng nhập
-                  </label>
-                </div>
-                <a href="#" className="text-xs text-muted-foreground hover:text-primary transition flex items-center gap-1">
-                  <Smartphone className="h-3 w-3" />
-                  2FA
-                </a>
-              </div>
-
+            <AnimatePresence>
               {error && (
                 <motion.div
-                  initial={{ opacity: 0, x: -10 }}
+                  initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="rounded-xl bg-danger/10 border border-danger/30 p-3 text-xs text-danger"
+                  exit={{ opacity: 0, x: -8 }}
+                  className="flex items-center gap-2 rounded-md border border-danger/40 bg-danger/10 px-3 py-2 text-[12px] text-danger"
                 >
+                  <span className="h-1.5 w-1.5 rounded-full bg-danger animate-pulse" />
                   {error}
                 </motion.div>
               )}
+            </AnimatePresence>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="group w-full h-12 rounded-xl gradient-primary text-white font-semibold shadow-lg glow hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 transition"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Đang đăng nhập...
-                  </>
-                ) : (
-                  <>
-                    Đăng nhập
-                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition" />
-                  </>
-                )}
-              </button>
-            </form>
+            <button
+              type="submit"
+              disabled={loading}
+              className="group relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-md bg-primary text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent" style={{ animation: "shimmer 2s infinite" }} />
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Đang xác thực...
+                </>
+              ) : (
+                <>
+                  Truy cập hệ thống
+                  <ChevronRight className="h-4 w-4 transition group-hover:translate-x-1" />
+                </>
+              )}
+            </button>
+          </form>
 
-            <div className="mt-6 rounded-xl border border-border bg-muted/30 p-3">
-              <p className="text-[11px] text-muted-foreground text-center flex items-center justify-center gap-1.5">
-                <Mail className="h-3 w-3" />
-                Demo: <span className="font-mono font-semibold text-primary">admin</span> /{" "}
-                <span className="font-mono font-semibold text-primary">admin123</span>
-              </p>
-            </div>
+          <div className="mt-6 flex items-center justify-between text-[10px] text-muted-foreground">
+            <Link href="/" className="flex items-center gap-1.5 transition hover:text-foreground">
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Trang chủ
+            </Link>
+            <span className="flex items-center gap-1.5">
+              <Lock className="h-3 w-3" />
+              JWT • bcrypt • RBAC
+            </span>
           </div>
-
-          <p className="mt-6 text-center text-[10px] text-muted-foreground">
-            © 2026 RiceGuard • Bảo lưu mọi quyền
-          </p>
         </motion.div>
       </div>
     </div>

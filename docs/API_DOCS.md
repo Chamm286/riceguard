@@ -179,3 +179,32 @@ Base URL: `http://localhost:5000/api` (production: behind ngrok)
 | POST | /webhook/daily-report | Daily Security Report trigger |
 
 **Tổng cộng: ~80+ endpoints**
+
+
+## Analytics
+| Method | URL | Chức năng | Role |
+|--------|-----|-----------|------|
+| GET | /api/analytics/attacks-by-country | Thống kê tấn công theo quốc gia | admin/analyst |
+| GET | /api/analytics/top-attackers | Top IP tấn công nhiều nhất | admin/analyst |
+| GET | /api/analytics/attacks-by-type | Thống kê theo loại tấn công | admin/analyst |
+| GET | /api/analytics/attacks-timeline-hourly | Timeline tấn công theo giờ (24h) | admin/analyst |
+| GET | /api/analytics/ndvi-history | Lịch sử NDVI từ vệ tinh | Auth |
+| GET | /api/analytics/risk-score | Điểm rủi ro hệ thống | admin/analyst |
+| GET | /api/analytics/summary | Tóm tắt tổng quan | Auth |
+
+## AI
+| Method | URL | Chức năng | Role |
+|--------|-----|-----------|------|
+| POST | /api/ai/chat | Chat với AI assistant | Auth |
+| GET | /api/ai/suggestions | Gợi ý hành động từ AI | Auth |
+
+## User Management (mở rộng)
+| Method | URL | Chức năng | Role |
+|--------|-----|-----------|------|
+| POST | /api/users/register | Đăng ký user mới | Public |
+| GET | /api/users/:id | Chi tiết user | admin |
+| DELETE | /api/users/:id | Xóa user | admin |
+| PUT | /api/users/:id/role | Phân quyền user | admin |
+
+## Ghi chú
+Tất cả các resource (Alerts, Threats, Assets, Investigations, Logs, Fields, Playbooks, Compliance, Notifications, Visitors) đều hỗ trợ đầy đủ CRUD: GET (list), GET /:id (chi tiết), POST (tạo), PUT /:id (cập nhật), DELETE /:id (xóa).
